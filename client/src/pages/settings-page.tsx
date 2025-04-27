@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
+import { useCurrency } from "@/hooks/use-currency";
 
 // Profile form schema
 const profileFormSchema = z.object({
@@ -113,7 +114,7 @@ export default function SettingsPage() {
   });
 
   // Update profile when data is loaded
-  React.useEffect(() => {
+  useEffect(() => {
     if (profile) {
       profileForm.reset({
         businessName: profile.businessName || "",
@@ -184,7 +185,7 @@ export default function SettingsPage() {
   });
   
   // Update currency when user data is loaded
-  React.useEffect(() => {
+  useEffect(() => {
     if (user?.currency) {
       currencyForm.reset({
         currency: user.currency,
@@ -231,13 +232,33 @@ export default function SettingsPage() {
   ];
 
   // Revenue range options
+  const { currencyCode, formatCurrency } = useCurrency();
+  
   const revenueRangeOptions = [
-    { value: "range1", label: "Less than $1,000" },
-    { value: "range2", label: "$1,000 - $5,000" },
-    { value: "range3", label: "$5,000 - $10,000" },
-    { value: "range4", label: "$10,000 - $25,000" },
-    { value: "range5", label: "$25,000 - $50,000" },
-    { value: "range6", label: "More than $50,000" },
+    { 
+      value: "range1", 
+      label: `Less than ${formatCurrency(1000)}` 
+    },
+    { 
+      value: "range2", 
+      label: `${formatCurrency(1000)} - ${formatCurrency(5000)}` 
+    },
+    { 
+      value: "range3", 
+      label: `${formatCurrency(5000)} - ${formatCurrency(10000)}` 
+    },
+    { 
+      value: "range4", 
+      label: `${formatCurrency(10000)} - ${formatCurrency(25000)}` 
+    },
+    { 
+      value: "range5", 
+      label: `${formatCurrency(25000)} - ${formatCurrency(50000)}` 
+    },
+    { 
+      value: "range6", 
+      label: `More than ${formatCurrency(50000)}` 
+    },
   ];
 
   return (
@@ -522,12 +543,12 @@ export default function SettingsPage() {
                     <Button
                       variant="outline"
                       size="icon"
-                      className={theme === 'dark' ? 'bg-[#27AE60]/10 border-[#27AE60]' : ''}
+                      className={`mr-2 ${theme === 'dark' ? 'bg-[#27AE60]/10 border-[#27AE60]' : ''}`}
                       onClick={() => setTheme("dark")}
                     >
                       <Moon className="h-5 w-5" />
                     </Button>
-                    <span className="ml-4 text-sm text-gray-600">
+                    <span className="ml-4 text-sm text-muted-foreground">
                       {theme === 'light' ? 'Light Mode' : 'Dark Mode'}
                     </span>
                   </div>
@@ -550,6 +571,3 @@ export default function SettingsPage() {
     </MainLayout>
   );
 }
-
-// React import needed for the useEffect hook
-import React from "react";
