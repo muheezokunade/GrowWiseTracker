@@ -91,13 +91,27 @@ export default function GrowthGoalsPage() {
     },
   });
 
+  const formatDateForSubmission = (data: any) => {
+    const formattedData = { ...data };
+    
+    // If targetDate exists and is in DD/MM/YYYY format, convert to YYYY-MM-DD
+    if (formattedData.targetDate && formattedData.targetDate.includes('/')) {
+      const [day, month, year] = formattedData.targetDate.split('/');
+      formattedData.targetDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    return formattedData;
+  };
+
   const handleAddGoal = (data: any) => {
-    createGoal.mutate(data);
+    const formattedData = formatDateForSubmission(data);
+    createGoal.mutate(formattedData);
   };
 
   const handleUpdateGoal = (data: any) => {
     if (editingGoal) {
-      updateGoal.mutate({ id: editingGoal.id, data });
+      const formattedData = formatDateForSubmission(data);
+      updateGoal.mutate({ id: editingGoal.id, data: formattedData });
     }
   };
 

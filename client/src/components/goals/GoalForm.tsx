@@ -18,7 +18,18 @@ const goalFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
   targetAmount: z.coerce.number().positive("Target amount must be positive"),
   currentAmount: z.coerce.number().min(0, "Current amount must be 0 or positive"),
-  targetDate: z.string().optional(),
+  targetDate: z.string().refine(
+    (val) => {
+      if (!val) return true; // Optional, so empty is ok
+      // Accept either YYYY-MM-DD, DD/MM/YYYY, or MM/DD/YYYY formats
+      return (
+        /^\d{4}-\d{2}-\d{2}$/.test(val) || 
+        /^\d{2}\/\d{2}\/\d{4}$/.test(val) ||
+        /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)
+      );
+    }, 
+    { message: "Date must be in a valid format (YYYY-MM-DD or DD/MM/YYYY)" }
+  ).optional(),
   isCompleted: z.boolean().default(false),
 });
 
