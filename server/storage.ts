@@ -13,8 +13,10 @@ import { db } from "./db";
 import { eq } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
+import createMemoryStore from "memorystore";
 
 const PostgresSessionStore = connectPg(session);
+const MemoryStore = createMemoryStore(session);
 
 // Storage interface
 export interface IStorage {
@@ -78,11 +80,21 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({ 
-      pool, 
-      createTableIfMissing: true,
-      tableName: 'session' // Explicit table name
-    });
+    try {
+      // Try to use PostgreSQL session store
+      this.sessionStore = new PostgresSessionStore({ 
+        pool, 
+        createTableIfMissing: true,
+        tableName: 'session' // Explicit table name
+      });
+      console.log('Using PostgreSQL session store');
+    } catch (error) {
+      // Fall back to memory store if PostgreSQL connection fails
+      console.warn('Failed to create PostgreSQL session store, falling back to memory store:', error);
+      this.sessionStore = new MemoryStore({
+        checkPeriod: 86400000 // prune expired entries every 24h
+      });
+    }
   }
 
   // User operations

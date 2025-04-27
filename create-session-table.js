@@ -1,16 +1,10 @@
-import { execSync } from 'child_process';
 import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import path from 'path';
 import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
 
 // Load environment variables
 dotenv.config();
 
-// Execute Drizzle migration
-async function createTables() {
+async function createSessionTable() {
   if (!process.env.DATABASE_URL) {
     console.error('DATABASE_URL is not set');
     return;
@@ -25,15 +19,7 @@ async function createTables() {
     }
   });
   
-  const db = drizzle(pool);
-  
   try {
-    console.log('Creating schema...');
-    
-    // We'll use the drizzle-kit push command instead of writing custom SQL
-    // This will automatically create tables based on our schema
-    execSync('npx drizzle-kit push:pg --schema=./shared/schema.ts');
-    
     console.log('Creating session table...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS "session" (
@@ -45,12 +31,12 @@ async function createTables() {
       CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
     `);
     
-    console.log('Tables created successfully');
+    console.log('Session table created successfully');
   } catch (error) {
-    console.error('Error creating tables:', error);
+    console.error('Error creating session table:', error);
   } finally {
     await pool.end();
   }
 }
 
-createTables().catch(error => console.error(error));
+createSessionTable().catch(error => console.error(error));
