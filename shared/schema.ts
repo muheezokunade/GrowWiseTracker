@@ -70,18 +70,33 @@ export const insertUserSchema = createInsertSchema(users).pick({
   monthlyRevenue: true,
 });
 
-export const insertTransactionSchema = createInsertSchema(transactions).omit({
-  id: true,
-});
+export const insertTransactionSchema = createInsertSchema(transactions)
+  .omit({
+    id: true,
+  })
+  .extend({
+    // Override the date field to accept string format from the client
+    date: z.string().transform((dateStr) => {
+      return new Date(dateStr);
+    }),
+  });
 
 export const insertProfitSplitSchema = createInsertSchema(profitSplits).omit({
   id: true,
 });
 
-export const insertGrowthGoalSchema = createInsertSchema(growthGoals).omit({
-  id: true,
-  createdAt: true,
-});
+export const insertGrowthGoalSchema = createInsertSchema(growthGoals)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    // Override the target date field to accept string format from the client
+    targetDate: z.string().nullable().transform((dateStr) => {
+      if (!dateStr) return null;
+      return new Date(dateStr);
+    }),
+  });
 
 export const insertOnboardingSchema = createInsertSchema(onboarding).omit({
   id: true,
