@@ -10,6 +10,10 @@ export const users = pgTable("users", {
   businessName: text("business_name"),
   industry: text("industry"),
   monthlyRevenue: text("monthly_revenue"),
+  isAdmin: boolean("is_admin").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastLoginAt: timestamp("last_login_at"),
+  status: text("status").default("active"), // active, suspended, deleted
 });
 
 // Transactions table
@@ -78,6 +82,64 @@ export const insertOnboardingSchema = createInsertSchema(onboarding).omit({
   id: true,
 });
 
+// Support tickets
+export const supportTickets = pgTable("support_tickets", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  status: text("status").notNull().default("open"), // open, in_progress, resolved
+  priority: text("priority").notNull().default("medium"), // low, medium, high
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at"),
+  assignedToId: integer("assigned_to_id"), // Admin user ID
+  resolution: text("resolution"),
+});
+
+// System notifications
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull().default("announcement"), // announcement, maintenance, alert
+  targetUserIds: text("target_user_ids"), // Comma-separated IDs or 'all'
+  sentAt: timestamp("sent_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdById: integer("created_by_id").notNull(), // Admin user ID
+});
+
+// Plans and pricing
+export const plans = pgTable("plans", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  price: real("price").notNull(),
+  billingCycle: text("billing_cycle").notNull().default("monthly"), // monthly, yearly
+  features: text("features").notNull(), // JSON string of features
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+// Insert schemas for new tables
+export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  sentAt: true,
+});
+
+export const insertPlanSchema = createInsertSchema(plans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Define types for select and insert operations
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -93,3 +155,12 @@ export type GrowthGoal = typeof growthGoals.$inferSelect;
 
 export type InsertOnboarding = z.infer<typeof insertOnboardingSchema>;
 export type Onboarding = typeof onboarding.$inferSelect;
+
+export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
+export type SupportTicket = typeof supportTickets.$inferSelect;
+
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
+export type InsertPlan = z.infer<typeof insertPlanSchema>;
+export type Plan = typeof plans.$inferSelect;

@@ -3,7 +3,10 @@ import {
   transactions, type Transaction, type InsertTransaction,
   profitSplits, type ProfitSplit, type InsertProfitSplit,
   growthGoals, type GrowthGoal, type InsertGrowthGoal,
-  onboarding, type Onboarding, type InsertOnboarding
+  onboarding, type Onboarding, type InsertOnboarding,
+  supportTickets, type SupportTicket, type InsertSupportTicket,
+  notifications, type Notification, type InsertNotification,
+  plans, type Plan, type InsertPlan
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -17,6 +20,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, data: Partial<User>): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   
   // Transaction operations
   getTransactions(userId: number): Promise<Transaction[]>;
@@ -36,13 +40,34 @@ export interface IStorage {
   createGrowthGoal(goal: InsertGrowthGoal): Promise<GrowthGoal>;
   updateGrowthGoal(id: number, data: Partial<GrowthGoal>): Promise<GrowthGoal | undefined>;
   deleteGrowthGoal(id: number): Promise<boolean>;
+  getAllGrowthGoals(): Promise<GrowthGoal[]>;
   
   // Onboarding operations
   getOnboarding(userId: number): Promise<Onboarding | undefined>;
   createOnboarding(onboarding: InsertOnboarding): Promise<Onboarding>;
   updateOnboarding(userId: number, data: Partial<Onboarding>): Promise<Onboarding | undefined>;
   
-  sessionStore: session.SessionStore;
+  // Support ticket operations
+  getSupportTickets(): Promise<SupportTicket[]>;
+  getSupportTicketsByUser(userId: number): Promise<SupportTicket[]>;
+  getSupportTicketById(id: number): Promise<SupportTicket | undefined>;
+  createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
+  updateSupportTicket(id: number, data: Partial<SupportTicket>): Promise<SupportTicket | undefined>;
+  
+  // Notification operations
+  getNotifications(): Promise<Notification[]>;
+  getNotificationById(id: number): Promise<Notification | undefined>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  updateNotification(id: number, data: Partial<Notification>): Promise<Notification | undefined>;
+  deleteNotification(id: number): Promise<boolean>;
+  
+  // Plan operations
+  getPlans(): Promise<Plan[]>;
+  getPlanById(id: number): Promise<Plan | undefined>;
+  createPlan(plan: InsertPlan): Promise<Plan>;
+  updatePlan(id: number, data: Partial<Plan>): Promise<Plan | undefined>;
+  
+  sessionStore: session.Store;
 }
 
 // In-memory implementation
@@ -52,12 +77,18 @@ export class MemStorage implements IStorage {
   private profitSplits: Map<number, ProfitSplit>;
   private growthGoals: Map<number, GrowthGoal>;
   private onboardingSteps: Map<number, Onboarding>;
+  private supportTickets: Map<number, SupportTicket>;
+  private notifications: Map<number, Notification>;
+  private plans: Map<number, Plan>;
   private userIdCounter: number;
   private transactionIdCounter: number;
   private profitSplitIdCounter: number;
   private growthGoalIdCounter: number;
   private onboardingIdCounter: number;
-  sessionStore: session.SessionStore;
+  private supportTicketIdCounter: number;
+  private notificationIdCounter: number;
+  private planIdCounter: number;
+  sessionStore: session.Store;
 
   constructor() {
     this.users = new Map();
@@ -65,14 +96,117 @@ export class MemStorage implements IStorage {
     this.profitSplits = new Map();
     this.growthGoals = new Map();
     this.onboardingSteps = new Map();
+    this.supportTickets = new Map();
+    this.notifications = new Map();
+    this.plans = new Map();
     this.userIdCounter = 1;
     this.transactionIdCounter = 1;
     this.profitSplitIdCounter = 1;
     this.growthGoalIdCounter = 1;
     this.onboardingIdCounter = 1;
+    this.supportTicketIdCounter = 1;
+    this.notificationIdCounter = 1;
+    this.planIdCounter = 1;
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // Prune expired entries every 24h
     });
+  }
+  
+  // Additional methods
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+  
+  async getAllGrowthGoals(): Promise<GrowthGoal[]> {
+    return Array.from(this.growthGoals.values());
+  }
+  
+  // Support ticket methods
+  async getSupportTickets(): Promise<SupportTicket[]> {
+    return Array.from(this.supportTickets.values());
+  }
+  
+  async getSupportTicketsByUser(userId: number): Promise<SupportTicket[]> {
+    return Array.from(this.supportTickets.values()).filter(
+      (ticket) => ticket.userId === userId
+    );
+  }
+  
+  async getSupportTicketById(id: number): Promise<SupportTicket | undefined> {
+    return this.supportTickets.get(id);
+  }
+  
+  async createSupportTicket(insertTicket: InsertSupportTicket): Promise<SupportTicket> {
+    const id = this.supportTicketIdCounter++;
+    const createdAt = new Date();
+    const supportTicket: SupportTicket = { ...insertTicket, id, createdAt, updatedAt: null };
+    this.supportTickets.set(id, supportTicket);
+    return supportTicket;
+  }
+  
+  async updateSupportTicket(id: number, data: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
+    const ticket = this.supportTickets.get(id);
+    if (!ticket) return undefined;
+    
+    const updatedTicket = { ...ticket, ...data, updatedAt: new Date() };
+    this.supportTickets.set(id, updatedTicket);
+    return updatedTicket;
+  }
+  
+  // Notification methods
+  async getNotifications(): Promise<Notification[]> {
+    return Array.from(this.notifications.values());
+  }
+  
+  async getNotificationById(id: number): Promise<Notification | undefined> {
+    return this.notifications.get(id);
+  }
+  
+  async createNotification(insertNotification: InsertNotification): Promise<Notification> {
+    const id = this.notificationIdCounter++;
+    const sentAt = new Date();
+    const notification: Notification = { ...insertNotification, id, sentAt };
+    this.notifications.set(id, notification);
+    return notification;
+  }
+  
+  async updateNotification(id: number, data: Partial<Notification>): Promise<Notification | undefined> {
+    const notification = this.notifications.get(id);
+    if (!notification) return undefined;
+    
+    const updatedNotification = { ...notification, ...data };
+    this.notifications.set(id, updatedNotification);
+    return updatedNotification;
+  }
+  
+  async deleteNotification(id: number): Promise<boolean> {
+    return this.notifications.delete(id);
+  }
+  
+  // Plan methods
+  async getPlans(): Promise<Plan[]> {
+    return Array.from(this.plans.values());
+  }
+  
+  async getPlanById(id: number): Promise<Plan | undefined> {
+    return this.plans.get(id);
+  }
+  
+  async createPlan(insertPlan: InsertPlan): Promise<Plan> {
+    const id = this.planIdCounter++;
+    const createdAt = new Date();
+    const plan: Plan = { ...insertPlan, id, createdAt, updatedAt: null };
+    this.plans.set(id, plan);
+    return plan;
+  }
+  
+  async updatePlan(id: number, data: Partial<Plan>): Promise<Plan | undefined> {
+    const plan = this.plans.get(id);
+    if (!plan) return undefined;
+    
+    const updatedPlan = { ...plan, ...data, updatedAt: new Date() };
+    this.plans.set(id, updatedPlan);
+    return updatedPlan;
   }
 
   // User methods
@@ -88,7 +222,18 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
-    const user: User = { ...insertUser, id };
+    const createdAt = new Date();
+    const user: User = { 
+      ...insertUser, 
+      id, 
+      businessName: null, 
+      industry: null, 
+      monthlyRevenue: null,
+      isAdmin: false,
+      createdAt,
+      lastLoginAt: null,
+      status: "active"
+    };
     this.users.set(id, user);
     return user;
   }
