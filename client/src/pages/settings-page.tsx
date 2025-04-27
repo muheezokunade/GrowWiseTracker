@@ -452,7 +452,12 @@ export default function SettingsPage() {
                   <h3 className="text-lg font-medium mb-4">Currency</h3>
                   <div className="mb-6">
                     <p className="text-sm text-gray-600 mb-3">
-                      Select your preferred currency for financial displays.
+                      Select your preferred currency for financial displays. 
+                      {user?.currency && (
+                        <span className="font-medium ml-1">
+                          Current currency: {user.currency}
+                        </span>
+                      )}
                     </p>
                     <Form {...currencyForm}>
                       <form onSubmit={currencyForm.handleSubmit(onCurrencySubmit)} className="space-y-4 max-w-md">
