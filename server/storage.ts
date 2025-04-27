@@ -10,7 +10,7 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import createMemoryStore from "memorystore";
@@ -100,11 +100,12 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Perform a simple test query to verify the database is accessible
-      db.select({ value: sql`1` }).limit(1).then(() => {
+      // Make this non-blocking and don't throw errors to ensure app can still start
+      db.execute(sql`SELECT 1 AS value`).then(() => {
         console.log('Successfully connected to the database');
-      }).catch(err => {
-        console.error('Database connection test failed:', err);
-        throw new Error('Database connection test failed');
+      }).catch((err: Error) => {
+        console.warn('Database connection test warning:', err);
+        console.log('Application will continue with reduced functionality');
       });
     } catch (error) {
       // Fall back to memory store if PostgreSQL connection fails
