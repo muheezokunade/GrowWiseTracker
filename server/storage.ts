@@ -95,14 +95,11 @@ export class DatabaseStorage implements IStorage {
           this.sessionStore = new PostgresSessionStore({ 
             pool: pool as any, // Type assertion to avoid TypeScript errors
             createTableIfMissing: true,
-            tableName: 'session', // Explicit table name
-            errorHandler: (error: any) => {
-              console.warn('PostgreSQL session store error:', error);
-            }
+            tableName: 'session' // Explicit table name
           });
           console.log('Using PostgreSQL session store');
-        } catch (sessionError) {
-          throw new Error(`Failed to create PostgreSQL session store: ${sessionError.message}`);
+        } catch (sessionError: any) {
+          throw new Error(`Failed to create PostgreSQL session store: ${sessionError?.message || 'Unknown error'}`);
         }
       } else {
         throw new Error('Database pool is not available');

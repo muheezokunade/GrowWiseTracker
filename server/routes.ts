@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db, isDatabaseConnected } from "./db";
 import { setupAuth } from "./auth";
 import { z } from "zod";
 import { 
@@ -493,6 +494,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === Database Health API ===
+  
+  // Check storage and database status
+  app.get('/api/storage-status', async (req, res) => {
+    try {
+      // Return status about database and storage system
+      const dbAvailable = isDatabaseConnected();
+      
+      // Create a sample user to check if storage is working
+      const testUsername = `test-${Date.now()}`;
+      
+      const testUser = {
+        username: testUsername,
+        email: `${testUsername}@example.com`,
+        password: 'test-password',
+        fullName: 'Test User',
+        currency: 'USD',
+        isAdmin: false
+      };
+      
+      // Test basic storage operations
+      let createdUser;
+      try {
+        createdUser = await storage.createUser(testUser);
+      } catch (err) {
+        console.error('Error creating test user:', err);
+      }
+      
+      res.status(200).json({
+        status: 'success',
+        databaseConnected: dbAvailable,
+        storageWorking: !!createdUser,
+        storageType: dbAvailable ? 'database with memory fallback' : 'memory only',
+        message: 'Storage system is operational',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Storage status check error:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Error checking storage status',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   // === User Profile API ===
 
   // Update user profile
