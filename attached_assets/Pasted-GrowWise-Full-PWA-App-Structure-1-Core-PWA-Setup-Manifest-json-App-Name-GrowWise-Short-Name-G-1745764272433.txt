@@ -1,0 +1,148 @@
+GrowWise – Full PWA App Structure
+1. Core PWA Setup
+Manifest.json
+
+App Name: GrowWise
+
+Short Name: GrowWise
+
+Theme Color: #27AE60 (Growth Green)
+
+Background Color: #F8F9FA (Cloud White)
+
+Display Mode: standalone (looks like a real app when installed)
+
+Icons: App icons for 192px, 512px sizes
+
+Service Worker
+
+Cache static assets (HTML, CSS, JS, Fonts, Images)
+
+Offline fallback page
+
+Pre-cache the dashboard and transactions screen for faster access
+
+Background sync (optional for future updates: sync new transactions while offline)
+
+2. Screen Map (PWA Pages & Routes)
+
+Screen	URL Route	Key Purpose
+Landing Page	/	App info + Signup/Login call-to-action
+Signup/Login	/auth	New user signup, login, password reset
+Onboarding	/onboarding	New user personalization (business info, goals, bank connection)
+Main Dashboard	/dashboard	Financial KPIs, quick actions
+Transactions	/transactions	Income/expenses management
+Profit Split	/profit-split	Allocate profits smartly
+Growth Goals Planner	/growth-goals	Set and track business growth goals
+Financial Reports	/reports	Generate monthly/quarterly P&L and cash flow reports
+Settings	/settings	Profile, preferences, billing
+Help & Support	/help	FAQs, contact support
+3. Features on Each Screen (Designed for PWA)
+🏠 Landing Page (/)
+Fast-loading marketing page
+
+Install App prompt
+
+Link to signup/login
+
+🔐 Signup/Login (/auth)
+Authentication system (JWT or Supabase/Auth0)
+
+Offline handling: Save login until connection restored.
+
+🚀 Onboarding (/onboarding)
+Form steps with progressive saving (local cache if offline)
+
+Bank connect with Plaid or similar API (with fallback instructions if offline)
+
+Save progress between steps
+
+📊 Dashboard (/dashboard)
+Live revenue, expenses, profit KPIs
+
+Cash reserve graph (local cached view even offline)
+
+Smart suggestions panel (e.g., "Consider boosting cash reserve this month")
+
+🧾 Transactions (/transactions)
+List view of transactions
+
+Add/Edit/Delete transactions
+
+Categorize manually if no bank connection
+
+Offline transaction creation → sync when online
+
+🎯 Profit Split (/profit-split)
+Slider-based allocation tool (dynamic updating)
+
+Save splits locally first, sync to cloud when online
+
+🌱 Growth Goals Planner (/growth-goals)
+Create growth goals
+
+Auto-calculate monthly savings
+
+Track % progress
+
+Push notifications for milestone achievements (PWA push supported)
+
+📑 Financial Reports (/reports)
+Auto-generate P&L, Cash Flow
+
+Export reports offline (PDF generation using client-side library like jspdf)
+
+Cache last 3 reports locally
+
+⚙️ Settings (/settings)
+Update profile, preferences
+
+Manage bank connections
+
+Switch themes (Light/Dark Mode toggle)
+
+🆘 Help & Support (/help)
+Browse FAQs even offline
+
+Contact form stores message and sends once online
+
+4. UI/UX Principles (for PWA)
+Mobile-first responsive layout
+
+Touch-friendly buttons (minimum 48x48px)
+
+Smooth transitions (CSS transitions, no heavy JS animations)
+
+Skeleton loaders for fast perception on slow networks
+
+Install App banners using native PWA install prompts
+
+5. Tech Stack Recommendation for GrowWise PWA
+
+Part	Recommended
+Frontend Framework	React.js (Next.js for SEO) or Vue.js (Nuxt)
+State Management	Redux or Vuex
+Backend	Node.js (Express), Supabase (Postgres DB, Auth)
+Bank API	Plaid (for bank/account transactions)
+PWA Plugin	Workbox.js for service workers
+Hosting	Vercel / Netlify / AWS Amplify
+Notifications	Web Push Notifications (OneSignal optional)
+🌟 Bonus – PWA Experience Goals
+First load under 3s.
+
+Offline access to dashboard, transactions, profit split planner.
+
+Smooth app-like navigation (no full page reloads).
+
+User installs GrowWise to home screen without app store needed.
+
+🚀 GrowWise PWA User Flow
+mathematica
+Copy
+Edit
+Landing Page → Signup/Login → Onboarding → Dashboard
+ ↘ Transactions  ↘ Profit Split  ↘ Growth Goals  ↘ Reports
+ ↘ Settings  ↘ Help Center
+🔥 Summary
+GrowWise will feel like a real mobile finance app — but smarter, lighter, and installable in seconds.
+No app store drama. No heavy download. Always ready to help small business owners manage and grow their profits!

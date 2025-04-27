@@ -1,0 +1,189 @@
+ Full Screens & Features List
+1. Landing Page (Website / App Home)
+Purpose: Attract users, explain value, capture signups.
+
+Features:
+
+Clear headline ("Master Your Money, Fuel Your Growth")
+
+Benefits section (easy finance management, smart profit allocation, growth planning)
+
+Screenshots/demo video
+
+Pricing plans preview
+
+"Sign up free" button
+
+Testimonials (later, after user feedback)
+
+FAQ section
+
+2. Signup / Login Screen
+Purpose: Onboard users.
+
+Features:
+
+Email signup + password
+
+Social login (optional: Google, LinkedIn)
+
+"Forgot password?" recovery flow
+
+Terms and privacy agreement checkbox
+
+3. Onboarding Flow (New User Setup)
+Purpose: Personalize experience immediately.
+
+Screens inside onboarding:
+
+Welcome screen ("Let's Grow Your Business Smarter!")
+
+Business Info (Business Name, Industry, Monthly Revenue Range)
+
+Financial Goals Selection (choose 1–3: stability, aggressive growth, save for big purchase, etc.)
+
+Bank Connection prompt (secure API like Plaid)
+
+Profit Split Setup (suggested buckets: Owner Pay, Savings, Reinvestment — customizable)
+
+4. Main Dashboard (Home Screen)
+Purpose: Show overview of business financial health.
+
+Features:
+
+Total Revenue (current month)
+
+Total Expenses (current month)
+
+Profit (auto-calculated)
+
+Cash Reserve Balance
+
+KPI cards (profit margin %, cash runway, debt level if any)
+
+Quick Actions:
+
+Add expense
+
+Create a growth goal
+
+Reallocate profits
+
+5. Transactions Screen
+Purpose: Track income and expenses.
+
+Features:
+
+List of all transactions (auto-fetched from bank or manual entry)
+
+Filters (date range, income vs expenses, categories)
+
+Manual "Add Transaction" button
+
+Category assignment (Marketing, Rent, Salaries, Supplies, etc.)
+
+Smart Alerts (flag big expenses or spikes)
+
+6. Profit Split Screen
+Purpose: Help users allocate profit strategically.
+
+Features:
+
+Monthly profit calculation
+
+Default suggested splits (editable):
+
+40% Owner Pay
+
+30% Reinvestment
+
+20% Savings
+
+10% Tax reserve
+
+User can customize percentages
+
+Auto-calculate $ values based on current month's profit
+
+"Apply Split" button → move money between virtual buckets or show instruction.
+
+7. Growth Goals Planner Screen
+Purpose: Help users plan investments for business growth.
+
+Features:
+
+Create new goal (e.g., "Expand marketing budget by $500/month")
+
+Set Target Amount & Target Date
+
+System suggests monthly savings required
+
+Track goal progress (visual bar)
+
+8. Financial Reports Screen
+Purpose: Generate simple, clean reports.
+
+Features:
+
+Profit & Loss (P&L) Statement (monthly, quarterly, yearly view)
+
+Cash Flow Summary
+
+Growth Analysis Reports (e.g., "You grew profit 15% last quarter!")
+
+Export to PDF
+
+Print option
+
+Email to accountant button
+
+9. Settings Screen
+Purpose: Manage user settings and preferences.
+
+Features:
+
+Profile settings (Name, Email, Business Info)
+
+Profit split default preferences
+
+Connected bank accounts management
+
+Notification settings (e.g., monthly report reminder, spending alerts)
+
+Subscription plan info & upgrades
+
+Delete account button (GDPR compliance)
+
+10. Help & Support Center
+Purpose: Make sure users never feel stuck.
+
+Features:
+
+FAQs (How do I connect a bank? How is profit calculated?)
+
+Live chat widget (optional or later via Intercom/Zendesk)
+
+Request a callback option (optional)
+
+Tutorials/How-to videos
+
+Optional (Future Expansion Screens)
+(not needed for MVP but good for v2/v3)
+
+Team Management: Add other users to the business account.
+
+Investment Marketplace: Browse freelancers, marketing agencies, ads marketplaces.
+
+Virtual CFO Bot: Financial planning chatbot assistant.
+
+Summary Visual Map
+mathematica
+Copy
+Edit
+Landing Page → Sign Up/Login → Onboarding → Main Dashboard  
+       ↘        ↘
+ Transactions    Profit Split
+      ↘            ↘
+Financial Reports → Growth Goals Planner
+      ↘
+   Settings & Help Center
