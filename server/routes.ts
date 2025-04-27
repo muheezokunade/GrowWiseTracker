@@ -39,6 +39,11 @@ function generateCashReserveData(transactions: Transaction[]) {
     datePoints.push(pointDate);
   }
   
+  // Always add current date as the final point to ensure we show the most up-to-date balance
+  if (datePoints.length > 0 && datePoints[datePoints.length - 1].getTime() !== now.getTime()) {
+    datePoints.push(now);
+  }
+  
   // Sort transactions by date
   const sortedTransactions = [...transactions].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -77,6 +82,19 @@ function generateCashReserveData(transactions: Transaction[]) {
       date: now.toISOString().split('T')[0],
       amount: 0,
     });
+  }
+  
+  // Make sure the last point is today with the current balance
+  const totalBalance = transactions.reduce((sum, t) => {
+    return t.type === "income" ? sum + t.amount : sum - t.amount;
+  }, 0);
+  
+  // Add or update the final point to ensure it has the current total
+  if (cashReserveData.length > 0) {
+    cashReserveData[cashReserveData.length - 1] = {
+      date: now.toISOString().split('T')[0],
+      amount: Math.max(0, totalBalance), // Prevent negative for display purposes
+    };
   }
   
   return cashReserveData;
