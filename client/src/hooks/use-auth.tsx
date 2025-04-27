@@ -38,6 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
+      // This will trigger the auth page redirect
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
       toast({
         title: "Login successful",
         description: "Welcome back to GrowWise!",
@@ -59,6 +63,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
+      // This will trigger the auth page redirect
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
       toast({
         title: "Registration successful",
         description: "Welcome to GrowWise! Let's get started.",

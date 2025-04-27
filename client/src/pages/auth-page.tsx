@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -46,8 +46,15 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const [isLoginForm, setIsLoginForm] = useState(true);
-  const { loginMutation, registerMutation } = useAuth();
-  const [location, setLocation] = useLocation();
+  const { user, loginMutation, registerMutation } = useAuth();
+  const [location, navigate] = useLocation();
+  
+  // If user is already logged in, redirect to dashboard
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
 
   // Login form
   const loginForm = useForm<LoginFormValues>({
