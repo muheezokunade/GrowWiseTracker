@@ -69,7 +69,13 @@ const accountFormSchema = z.object({
   path: ["confirmPassword"],
 });
 
+// Currency form schema
+const currencyFormSchema = z.object({
+  currency: z.string().min(1, "Currency is required")
+});
+
 type AccountFormValues = z.infer<typeof accountFormSchema>;
+type CurrencyFormValues = z.infer<typeof currencyFormSchema>;
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -77,9 +83,22 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState("profile");
 
+  // Define a type for business profile
+  type BusinessProfile = {
+    businessName: string;
+    industry: string;
+    monthlyRevenue: string;
+  };
+  
   // Fetch user profile
-  const { data: profile, isLoading: isProfileLoading } = useQuery({
+  const { data: profile, isLoading: isProfileLoading } = useQuery<BusinessProfile>({
     queryKey: ["/api/user/profile"],
+    enabled: !!user,
+  });
+  
+  // Fetch user info from auth context
+  const { data: userInfo } = useQuery({
+    queryKey: ["/api/user"],
     enabled: !!user,
   });
 
@@ -154,6 +173,50 @@ export default function SettingsPage() {
       title: "Feature not implemented",
       description: "Password change functionality is not implemented in this demo.",
     });
+  };
+  
+  // Currency form
+  const currencyForm = useForm<CurrencyFormValues>({
+    resolver: zodResolver(currencyFormSchema),
+    defaultValues: {
+      currency: user?.currency || "USD",
+    },
+  });
+  
+  // Update currency when user data is loaded
+  React.useEffect(() => {
+    if (user?.currency) {
+      currencyForm.reset({
+        currency: user.currency,
+      });
+    }
+  }, [user, currencyForm]);
+  
+  // Update currency mutation
+  const updateCurrency = useMutation({
+    mutationFn: async (data: CurrencyFormValues) => {
+      const res = await apiRequest("PUT", "/api/user/currency", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({
+        title: "Currency updated",
+        description: "Your preferred currency has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to update currency",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Submit currency form
+  const onCurrencySubmit = (data: CurrencyFormValues) => {
+    updateCurrency.mutate(data);
   };
 
   // Industries options
@@ -386,6 +449,61 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
+                  <h3 className="text-lg font-medium mb-4">Currency</h3>
+                  <div className="mb-6">
+                    <p className="text-sm text-gray-600 mb-3">
+                      Select your preferred currency for financial displays.
+                    </p>
+                    <Form {...currencyForm}>
+                      <form onSubmit={currencyForm.handleSubmit(onCurrencySubmit)} className="space-y-4 max-w-md">
+                        <FormField
+                          control={currencyForm.control}
+                          name="currency"
+                          render={({ field }) => (
+                            <FormItem>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select preferred currency" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="USD">US Dollar (USD)</SelectItem>
+                                  <SelectItem value="EUR">Euro (EUR)</SelectItem>
+                                  <SelectItem value="GBP">British Pound (GBP)</SelectItem>
+                                  <SelectItem value="JPY">Japanese Yen (JPY)</SelectItem>
+                                  <SelectItem value="CAD">Canadian Dollar (CAD)</SelectItem>
+                                  <SelectItem value="AUD">Australian Dollar (AUD)</SelectItem>
+                                  <SelectItem value="CNY">Chinese Yuan (CNY)</SelectItem>
+                                  <SelectItem value="INR">Indian Rupee (INR)</SelectItem>
+                                  <SelectItem value="NGN">Nigerian Naira (NGN)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button 
+                          type="submit" 
+                          className="bg-[#27AE60] hover:bg-[#219653]"
+                          disabled={updateCurrency.isPending}
+                        >
+                          {updateCurrency.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            "Update Currency"
+                          )}
+                        </Button>
+                      </form>
+                    </Form>
+                  </div>
+
                   <h3 className="text-lg font-medium mb-4">Theme</h3>
                   <div className="flex items-center">
                     <Button

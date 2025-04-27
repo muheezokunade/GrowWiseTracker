@@ -254,6 +254,38 @@ export default function AuthPage() {
 
                 <FormField
                   control={registerForm.control}
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Preferred Currency</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your preferred currency" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="USD">US Dollar (USD)</SelectItem>
+                          <SelectItem value="EUR">Euro (EUR)</SelectItem>
+                          <SelectItem value="GBP">British Pound (GBP)</SelectItem>
+                          <SelectItem value="JPY">Japanese Yen (JPY)</SelectItem>
+                          <SelectItem value="CAD">Canadian Dollar (CAD)</SelectItem>
+                          <SelectItem value="AUD">Australian Dollar (AUD)</SelectItem>
+                          <SelectItem value="CNY">Chinese Yuan (CNY)</SelectItem>
+                          <SelectItem value="INR">Indian Rupee (INR)</SelectItem>
+                          <SelectItem value="NGN">Nigerian Naira (NGN)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={registerForm.control}
                   name="termsAccepted"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-start space-x-2 space-y-0">
