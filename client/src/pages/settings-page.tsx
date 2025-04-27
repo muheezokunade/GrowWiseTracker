@@ -41,6 +41,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
 import { useCurrency } from "@/hooks/use-currency";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 // Profile form schema
 const profileFormSchema = z.object({
@@ -82,6 +83,7 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
+  const { isInstallable, promptInstall } = usePwaInstall();
   const [activeTab, setActiveTab] = useState("profile");
 
   // Define a type for business profile
@@ -559,9 +561,28 @@ export default function SettingsPage() {
                   <p className="text-sm text-gray-600 mb-3">
                     Install GrowWise as a standalone app for quicker access, even when offline.
                   </p>
-                  <Button className="bg-[#27AE60] hover:bg-[#219653]">
-                    Install GrowWise App
-                  </Button>
+                  {isInstallable ? (
+                    <Button 
+                      className="bg-[#27AE60] hover:bg-[#219653]"
+                      onClick={promptInstall}
+                    >
+                      Install GrowWise App
+                    </Button>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <Button 
+                        className="bg-gray-300 hover:bg-gray-300 cursor-not-allowed text-gray-600"
+                        disabled
+                      >
+                        Install GrowWise App
+                      </Button>
+                      <p className="text-sm text-amber-600">
+                        {window.matchMedia('(display-mode: standalone)').matches
+                          ? "App is already installed on this device"
+                          : "App installation is not available in this browser or the app is already installed"}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
