@@ -24,35 +24,38 @@ export function ReportCard({ report }: ReportCardProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isEmailing, setIsEmailing] = useState(false);
 
-  // Download report mutation
-  const downloadMutation = useMutation({
-    mutationFn: async (reportId: number) => {
-      setIsDownloading(true);
-      try {
-        const res = await apiRequest('GET', `/api/reports/${reportId}/download`);
-        const data = await res.json();
-        
-        // In a real app, this would trigger a file download
-        // For now, we'll just show a success message
-        if (data.success) {
-          toast({
-            title: "Download Started",
-            description: `${report.name} is being downloaded.`,
-          });
-        }
-      } finally {
-        setIsDownloading(false);
-      }
-    },
-    onError: (error: Error) => {
+  // Report download function using direct fetch to handle file download
+  const handleDownloadReport = async (reportId: number) => {
+    setIsDownloading(true);
+    try {
+      // Create a URL for the API endpoint
+      const apiUrl = `/api/reports/${reportId}/download`;
+      
+      // Notify user that download is starting
+      toast({
+        title: "Preparing Download",
+        description: `${report.name} is being prepared for download.`,
+      });
+      
+      // Trigger the download by opening the URL in a new window
+      // This approach handles file downloads better than using fetch/apiRequest
+      window.open(apiUrl, '_blank');
+      
+      toast({
+        title: "Download Started",
+        description: `${report.name} download has started.`,
+      });
+    } catch (error) {
+      console.error("Download error:", error);
       toast({
         title: "Download Failed",
-        description: error.message,
+        description: "Failed to download the report. Please try again.",
         variant: "destructive",
       });
+    } finally {
       setIsDownloading(false);
     }
-  });
+  };
 
   // Email report mutation
   const emailMutation = useMutation({
@@ -83,7 +86,7 @@ export function ReportCard({ report }: ReportCardProps) {
   });
 
   const handleDownload = () => {
-    downloadMutation.mutate(report.id);
+    handleDownloadReport(report.id);
   };
 
   const handleEmail = () => {
