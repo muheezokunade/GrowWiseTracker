@@ -485,9 +485,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const profit = revenue - expenses;
       
+      // Calculate total cash reserve (all time)
+      const totalIncome = transactions
+        .filter((t) => t.type === "income")
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      const totalExpenses = transactions
+        .filter((t) => t.type === "expense")
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      const cashReserve = Math.max(0, totalIncome - totalExpenses);
+      
       // Calculate cash reserve data points for the chart
       // Create 5 data points from 2 months ago to current date
       const cashReserveData = generateCashReserveData(transactions);
+      
+      // Ensure the last data point has the correct cash reserve amount
+      if (cashReserveData.length > 0) {
+        cashReserveData[cashReserveData.length - 1].amount = cashReserve;
+      }
       
       // Get profit split percentages
       const profitSplit = await storage.getProfitSplit(req.user.id);
@@ -501,7 +517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           revenue,
           expenses,
           profit,
-          cashReserve: cashReserveData[cashReserveData.length - 1].amount,
+          cashReserve: cashReserve,
         },
         cashReserveData: cashReserveData,
         profitSplit: profitSplit || {
@@ -510,7 +526,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           savings: 20,
           taxReserve: 10
         },
-        recentTransactions: currentMonthTransactions.slice(0, 5),
+        recentTransactions: transactions.sort((a, b) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        ).slice(0, 5), // Show most recent transactions first
         growthGoals: growthGoals.slice(0, 3),
       });
     } catch (error) {

@@ -43,6 +43,7 @@ export default function DashboardPage() {
   // Fetch dashboard summary
   const { data, isLoading, error } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard/summary"],
+    refetchOnMount: true, // Always refetch when mounting this component
   });
   
   if (isLoading) {
