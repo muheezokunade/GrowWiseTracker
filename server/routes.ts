@@ -9,10 +9,18 @@ import {
   insertProfitSplitSchema,
   insertOnboardingSchema 
 } from "@shared/schema";
+import { registerAdminRoutes } from "./admin-routes";
+import { registerUserAdminRoutes } from "./user-admin-routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
+  
+  // Register admin-specific routes
+  registerAdminRoutes(app);
+  
+  // Register user-facing admin-related routes (support tickets, notifications)
+  registerUserAdminRoutes(app);
 
   // === Transactions API ===
   
