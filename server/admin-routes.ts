@@ -165,7 +165,7 @@ export function registerAdminRoutes(app: Express) {
       
       const updatedTicket = await storage.updateSupportTicket(ticketId, {
         ...req.body,
-        assignedToId: req.body.assignedToId || req.user.id,
+        assignedToId: req.body.assignedToId || (req.user ? req.user.id : null),
         updatedAt: new Date()
       });
       
@@ -210,7 +210,7 @@ export function registerAdminRoutes(app: Express) {
     try {
       const newNotification = await storage.createNotification({
         ...req.body,
-        createdById: req.user.id,
+        createdById: req.user ? req.user.id : 1, // Fallback to ID 1 if req.user is undefined
         sentAt: new Date(),
         // Ensure required fields have default values
         type: req.body.type || "announcement",

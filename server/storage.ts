@@ -316,7 +316,14 @@ export class MemStorage implements IStorage {
 
   async createProfitSplit(insertProfitSplit: InsertProfitSplit): Promise<ProfitSplit> {
     const id = this.profitSplitIdCounter++;
-    const profitSplit: ProfitSplit = { ...insertProfitSplit, id };
+    const profitSplit: ProfitSplit = { 
+      ...insertProfitSplit, 
+      id,
+      ownerPay: insertProfitSplit.ownerPay || 0,
+      reinvestment: insertProfitSplit.reinvestment || 0,
+      savings: insertProfitSplit.savings || 0,
+      taxReserve: insertProfitSplit.taxReserve || 0
+    };
     this.profitSplits.set(id, profitSplit);
     return profitSplit;
   }
@@ -344,7 +351,14 @@ export class MemStorage implements IStorage {
   async createGrowthGoal(insertGrowthGoal: InsertGrowthGoal): Promise<GrowthGoal> {
     const id = this.growthGoalIdCounter++;
     const createdAt = new Date();
-    const growthGoal: GrowthGoal = { ...insertGrowthGoal, id, createdAt };
+    const growthGoal: GrowthGoal = { 
+      ...insertGrowthGoal, 
+      id, 
+      createdAt,
+      currentAmount: insertGrowthGoal.currentAmount || 0,
+      targetDate: insertGrowthGoal.targetDate || null,
+      isCompleted: insertGrowthGoal.isCompleted || false
+    };
     this.growthGoals.set(id, growthGoal);
     return growthGoal;
   }
@@ -371,7 +385,14 @@ export class MemStorage implements IStorage {
 
   async createOnboarding(insertOnboarding: InsertOnboarding): Promise<Onboarding> {
     const id = this.onboardingIdCounter++;
-    const onboardingStep: Onboarding = { ...insertOnboarding, id };
+    const onboardingStep: Onboarding = { 
+      ...insertOnboarding, 
+      id,
+      step: insertOnboarding.step || 1,
+      completed: insertOnboarding.completed || false,
+      financialGoals: insertOnboarding.financialGoals || null,
+      bankConnected: insertOnboarding.bankConnected || false
+    };
     this.onboardingSteps.set(id, onboardingStep);
     return onboardingStep;
   }
