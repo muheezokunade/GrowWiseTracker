@@ -82,19 +82,37 @@ export class DatabaseStorage implements IStorage {
 
   constructor() {
     try {
-      // Try to use PostgreSQL session store
-      this.sessionStore = new PostgresSessionStore({ 
-        pool, 
-        createTableIfMissing: true,
-        tableName: 'session' // Explicit table name
+      // Check if db instance is available first
+      if (!db) {
+        throw new Error('Database connection is not available');
+      }
+      
+      // Only use PostgreSQL session store if pool is available
+      if (pool) {
+        this.sessionStore = new PostgresSessionStore({ 
+          pool: pool as any, // Type assertion to avoid TypeScript errors
+          createTableIfMissing: true,
+          tableName: 'session' // Explicit table name
+        });
+        console.log('Using PostgreSQL session store');
+      } else {
+        throw new Error('Database pool is not available');
+      }
+      
+      // Perform a simple test query to verify the database is accessible
+      db.select({ value: sql`1` }).limit(1).then(() => {
+        console.log('Successfully connected to the database');
+      }).catch(err => {
+        console.error('Database connection test failed:', err);
+        throw new Error('Database connection test failed');
       });
-      console.log('Using PostgreSQL session store');
     } catch (error) {
       // Fall back to memory store if PostgreSQL connection fails
       console.warn('Failed to create PostgreSQL session store, falling back to memory store:', error);
       this.sessionStore = new MemoryStore({
         checkPeriod: 86400000 // prune expired entries every 24h
       });
+      console.log('Using memory session store');
     }
   }
 
@@ -244,157 +262,249 @@ export class DatabaseStorage implements IStorage {
 
   // Growth goal operations
   async getGrowthGoals(userId: number): Promise<GrowthGoal[]> {
-    return await db.select()
-      .from(growthGoals)
-      .where(eq(growthGoals.userId, userId));
+    try {
+      return await db.select()
+        .from(growthGoals)
+        .where(eq(growthGoals.userId, userId));
+    } catch (error) {
+      handleDatabaseError(error, `get growth goals for user ${userId}`);
+    }
   }
 
   async getGrowthGoalById(id: number): Promise<GrowthGoal | undefined> {
-    const [goal] = await db.select()
-      .from(growthGoals)
-      .where(eq(growthGoals.id, id));
-    return goal;
+    try {
+      const [goal] = await db.select()
+        .from(growthGoals)
+        .where(eq(growthGoals.id, id));
+      return goal;
+    } catch (error) {
+      handleDatabaseError(error, `get growth goal with id ${id}`);
+    }
   }
 
   async createGrowthGoal(insertGrowthGoal: InsertGrowthGoal): Promise<GrowthGoal> {
-    const [goal] = await db.insert(growthGoals)
-      .values(insertGrowthGoal)
-      .returning();
-    return goal;
+    try {
+      const [goal] = await db.insert(growthGoals)
+        .values(insertGrowthGoal)
+        .returning();
+      return goal;
+    } catch (error) {
+      handleDatabaseError(error, `create growth goal`);
+    }
   }
 
   async updateGrowthGoal(id: number, data: Partial<GrowthGoal>): Promise<GrowthGoal | undefined> {
-    const [goal] = await db.update(growthGoals)
-      .set(data)
-      .where(eq(growthGoals.id, id))
-      .returning();
-    return goal;
+    try {
+      const [goal] = await db.update(growthGoals)
+        .set(data)
+        .where(eq(growthGoals.id, id))
+        .returning();
+      return goal;
+    } catch (error) {
+      handleDatabaseError(error, `update growth goal with id ${id}`);
+    }
   }
 
   async deleteGrowthGoal(id: number): Promise<boolean> {
-    await db.delete(growthGoals)
-      .where(eq(growthGoals.id, id));
-    return true;
+    try {
+      await db.delete(growthGoals)
+        .where(eq(growthGoals.id, id));
+      return true;
+    } catch (error) {
+      handleDatabaseError(error, `delete growth goal with id ${id}`);
+    }
   }
 
   async getAllGrowthGoals(): Promise<GrowthGoal[]> {
-    return await db.select().from(growthGoals);
+    try {
+      return await db.select().from(growthGoals);
+    } catch (error) {
+      handleDatabaseError(error, `get all growth goals`);
+    }
   }
 
   // Onboarding operations
   async getOnboarding(userId: number): Promise<Onboarding | undefined> {
-    const [onboardingData] = await db.select()
-      .from(onboarding)
-      .where(eq(onboarding.userId, userId));
-    return onboardingData;
+    try {
+      const [onboardingData] = await db.select()
+        .from(onboarding)
+        .where(eq(onboarding.userId, userId));
+      return onboardingData;
+    } catch (error) {
+      handleDatabaseError(error, `get onboarding for user ${userId}`);
+    }
   }
 
   async createOnboarding(insertOnboarding: InsertOnboarding): Promise<Onboarding> {
-    const [onboardingData] = await db.insert(onboarding)
-      .values(insertOnboarding)
-      .returning();
-    return onboardingData;
+    try {
+      const [onboardingData] = await db.insert(onboarding)
+        .values(insertOnboarding)
+        .returning();
+      return onboardingData;
+    } catch (error) {
+      handleDatabaseError(error, `create onboarding`);
+    }
   }
 
   async updateOnboarding(userId: number, data: Partial<Onboarding>): Promise<Onboarding | undefined> {
-    const [onboardingData] = await db.update(onboarding)
-      .set(data)
-      .where(eq(onboarding.userId, userId))
-      .returning();
-    return onboardingData;
+    try {
+      const [onboardingData] = await db.update(onboarding)
+        .set(data)
+        .where(eq(onboarding.userId, userId))
+        .returning();
+      return onboardingData;
+    } catch (error) {
+      handleDatabaseError(error, `update onboarding for user ${userId}`);
+    }
   }
 
   // Support ticket operations
   async getSupportTickets(): Promise<SupportTicket[]> {
-    return await db.select().from(supportTickets);
+    try {
+      return await db.select().from(supportTickets);
+    } catch (error) {
+      handleDatabaseError(error, `get all support tickets`);
+    }
   }
 
   async getSupportTicketsByUser(userId: number): Promise<SupportTicket[]> {
-    return await db.select()
-      .from(supportTickets)
-      .where(eq(supportTickets.userId, userId));
+    try {
+      return await db.select()
+        .from(supportTickets)
+        .where(eq(supportTickets.userId, userId));
+    } catch (error) {
+      handleDatabaseError(error, `get support tickets for user ${userId}`);
+    }
   }
 
   async getSupportTicketById(id: number): Promise<SupportTicket | undefined> {
-    const [ticket] = await db.select()
-      .from(supportTickets)
-      .where(eq(supportTickets.id, id));
-    return ticket;
+    try {
+      const [ticket] = await db.select()
+        .from(supportTickets)
+        .where(eq(supportTickets.id, id));
+      return ticket;
+    } catch (error) {
+      handleDatabaseError(error, `get support ticket with id ${id}`);
+    }
   }
 
   async createSupportTicket(insertTicket: InsertSupportTicket): Promise<SupportTicket> {
-    const [ticket] = await db.insert(supportTickets)
-      .values(insertTicket)
-      .returning();
-    return ticket;
+    try {
+      const [ticket] = await db.insert(supportTickets)
+        .values(insertTicket)
+        .returning();
+      return ticket;
+    } catch (error) {
+      handleDatabaseError(error, `create support ticket`);
+    }
   }
 
   async updateSupportTicket(id: number, data: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
-    const [ticket] = await db.update(supportTickets)
-      .set(data)
-      .where(eq(supportTickets.id, id))
-      .returning();
-    return ticket;
+    try {
+      const [ticket] = await db.update(supportTickets)
+        .set(data)
+        .where(eq(supportTickets.id, id))
+        .returning();
+      return ticket;
+    } catch (error) {
+      handleDatabaseError(error, `update support ticket with id ${id}`);
+    }
   }
 
   // Notification operations
   async getNotifications(): Promise<Notification[]> {
-    return await db.select().from(notifications);
+    try {
+      return await db.select().from(notifications);
+    } catch (error) {
+      handleDatabaseError(error, `get all notifications`);
+    }
   }
 
   async getNotificationById(id: number): Promise<Notification | undefined> {
-    const [notification] = await db.select()
-      .from(notifications)
-      .where(eq(notifications.id, id));
-    return notification;
+    try {
+      const [notification] = await db.select()
+        .from(notifications)
+        .where(eq(notifications.id, id));
+      return notification;
+    } catch (error) {
+      handleDatabaseError(error, `get notification with id ${id}`);
+    }
   }
 
   async createNotification(insertNotification: InsertNotification): Promise<Notification> {
-    const [notification] = await db.insert(notifications)
-      .values(insertNotification)
-      .returning();
-    return notification;
+    try {
+      const [notification] = await db.insert(notifications)
+        .values(insertNotification)
+        .returning();
+      return notification;
+    } catch (error) {
+      handleDatabaseError(error, `create notification`);
+    }
   }
 
   async updateNotification(id: number, data: Partial<Notification>): Promise<Notification | undefined> {
-    const [notification] = await db.update(notifications)
-      .set(data)
-      .where(eq(notifications.id, id))
-      .returning();
-    return notification;
+    try {
+      const [notification] = await db.update(notifications)
+        .set(data)
+        .where(eq(notifications.id, id))
+        .returning();
+      return notification;
+    } catch (error) {
+      handleDatabaseError(error, `update notification with id ${id}`);
+    }
   }
 
   async deleteNotification(id: number): Promise<boolean> {
-    await db.delete(notifications)
-      .where(eq(notifications.id, id));
-    return true;
+    try {
+      await db.delete(notifications)
+        .where(eq(notifications.id, id));
+      return true;
+    } catch (error) {
+      handleDatabaseError(error, `delete notification with id ${id}`);
+    }
   }
 
   // Plan operations
   async getPlans(): Promise<Plan[]> {
-    return await db.select().from(plans);
+    try {
+      return await db.select().from(plans);
+    } catch (error) {
+      handleDatabaseError(error, `get all plans`);
+    }
   }
 
   async getPlanById(id: number): Promise<Plan | undefined> {
-    const [plan] = await db.select()
-      .from(plans)
-      .where(eq(plans.id, id));
-    return plan;
+    try {
+      const [plan] = await db.select()
+        .from(plans)
+        .where(eq(plans.id, id));
+      return plan;
+    } catch (error) {
+      handleDatabaseError(error, `get plan with id ${id}`);
+    }
   }
 
   async createPlan(insertPlan: InsertPlan): Promise<Plan> {
-    const [plan] = await db.insert(plans)
-      .values(insertPlan)
-      .returning();
-    return plan;
+    try {
+      const [plan] = await db.insert(plans)
+        .values(insertPlan)
+        .returning();
+      return plan;
+    } catch (error) {
+      handleDatabaseError(error, `create plan`);
+    }
   }
 
   async updatePlan(id: number, data: Partial<Plan>): Promise<Plan | undefined> {
-    const [plan] = await db.update(plans)
-      .set(data)
-      .where(eq(plans.id, id))
-      .returning();
-    return plan;
+    try {
+      const [plan] = await db.update(plans)
+        .set(data)
+        .where(eq(plans.id, id))
+        .returning();
+      return plan;
+    } catch (error) {
+      handleDatabaseError(error, `update plan with id ${id}`);
+    }
   }
 }
 
