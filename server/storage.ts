@@ -139,7 +139,16 @@ export class MemStorage implements IStorage {
   async createSupportTicket(insertTicket: InsertSupportTicket): Promise<SupportTicket> {
     const id = this.supportTicketIdCounter++;
     const createdAt = new Date();
-    const supportTicket: SupportTicket = { ...insertTicket, id, createdAt, updatedAt: null };
+    const supportTicket: SupportTicket = { 
+      ...insertTicket, 
+      id, 
+      createdAt, 
+      updatedAt: null,
+      status: insertTicket.status || "open",
+      priority: insertTicket.priority || "medium",
+      assignedToId: insertTicket.assignedToId ?? null,
+      resolution: insertTicket.resolution ?? null
+    };
     this.supportTickets.set(id, supportTicket);
     return supportTicket;
   }
@@ -165,7 +174,15 @@ export class MemStorage implements IStorage {
   async createNotification(insertNotification: InsertNotification): Promise<Notification> {
     const id = this.notificationIdCounter++;
     const sentAt = new Date();
-    const notification: Notification = { ...insertNotification, id, sentAt };
+    const notification: Notification = { 
+      ...insertNotification, 
+      id, 
+      sentAt,
+      type: insertNotification.type || "announcement",
+      targetUserIds: insertNotification.targetUserIds ?? null,
+      expiresAt: insertNotification.expiresAt ?? null,
+      isActive: insertNotification.isActive ?? true
+    };
     this.notifications.set(id, notification);
     return notification;
   }
@@ -195,7 +212,14 @@ export class MemStorage implements IStorage {
   async createPlan(insertPlan: InsertPlan): Promise<Plan> {
     const id = this.planIdCounter++;
     const createdAt = new Date();
-    const plan: Plan = { ...insertPlan, id, createdAt, updatedAt: null };
+    const plan: Plan = { 
+      ...insertPlan, 
+      id, 
+      createdAt, 
+      updatedAt: null,
+      isActive: insertPlan.isActive ?? true,
+      billingCycle: insertPlan.billingCycle || "monthly" 
+    };
     this.plans.set(id, plan);
     return plan;
   }
@@ -260,7 +284,12 @@ export class MemStorage implements IStorage {
 
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
     const id = this.transactionIdCounter++;
-    const transaction: Transaction = { ...insertTransaction, id };
+    const transaction: Transaction = { 
+      ...insertTransaction, 
+      id,
+      date: insertTransaction.date || new Date(),
+      category: insertTransaction.category ?? null
+    };
     this.transactions.set(id, transaction);
     return transaction;
   }
