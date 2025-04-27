@@ -9,9 +9,12 @@ import {
   plans, type Plan, type InsertPlan
 } from "@shared/schema";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 // Storage interface
 export interface IStorage {
@@ -70,343 +73,264 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
-// In-memory implementation
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private transactions: Map<number, Transaction>;
-  private profitSplits: Map<number, ProfitSplit>;
-  private growthGoals: Map<number, GrowthGoal>;
-  private onboardingSteps: Map<number, Onboarding>;
-  private supportTickets: Map<number, SupportTicket>;
-  private notifications: Map<number, Notification>;
-  private plans: Map<number, Plan>;
-  private userIdCounter: number;
-  private transactionIdCounter: number;
-  private profitSplitIdCounter: number;
-  private growthGoalIdCounter: number;
-  private onboardingIdCounter: number;
-  private supportTicketIdCounter: number;
-  private notificationIdCounter: number;
-  private planIdCounter: number;
+// Database Storage Implementation
+export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.transactions = new Map();
-    this.profitSplits = new Map();
-    this.growthGoals = new Map();
-    this.onboardingSteps = new Map();
-    this.supportTickets = new Map();
-    this.notifications = new Map();
-    this.plans = new Map();
-    this.userIdCounter = 1;
-    this.transactionIdCounter = 1;
-    this.profitSplitIdCounter = 1;
-    this.growthGoalIdCounter = 1;
-    this.onboardingIdCounter = 1;
-    this.supportTicketIdCounter = 1;
-    this.notificationIdCounter = 1;
-    this.planIdCounter = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000 // Prune expired entries every 24h
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
     });
   }
-  
-  // Additional methods
-  async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
-  }
-  
-  async getAllGrowthGoals(): Promise<GrowthGoal[]> {
-    return Array.from(this.growthGoals.values());
-  }
-  
-  // Support ticket methods
-  async getSupportTickets(): Promise<SupportTicket[]> {
-    return Array.from(this.supportTickets.values());
-  }
-  
-  async getSupportTicketsByUser(userId: number): Promise<SupportTicket[]> {
-    return Array.from(this.supportTickets.values()).filter(
-      (ticket) => ticket.userId === userId
-    );
-  }
-  
-  async getSupportTicketById(id: number): Promise<SupportTicket | undefined> {
-    return this.supportTickets.get(id);
-  }
-  
-  async createSupportTicket(insertTicket: InsertSupportTicket): Promise<SupportTicket> {
-    const id = this.supportTicketIdCounter++;
-    const createdAt = new Date();
-    const supportTicket: SupportTicket = { 
-      ...insertTicket, 
-      id, 
-      createdAt, 
-      updatedAt: null,
-      status: insertTicket.status || "open",
-      priority: insertTicket.priority || "medium",
-      assignedToId: insertTicket.assignedToId ?? null,
-      resolution: insertTicket.resolution ?? null
-    };
-    this.supportTickets.set(id, supportTicket);
-    return supportTicket;
-  }
-  
-  async updateSupportTicket(id: number, data: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
-    const ticket = this.supportTickets.get(id);
-    if (!ticket) return undefined;
-    
-    const updatedTicket = { ...ticket, ...data, updatedAt: new Date() };
-    this.supportTickets.set(id, updatedTicket);
-    return updatedTicket;
-  }
-  
-  // Notification methods
-  async getNotifications(): Promise<Notification[]> {
-    return Array.from(this.notifications.values());
-  }
-  
-  async getNotificationById(id: number): Promise<Notification | undefined> {
-    return this.notifications.get(id);
-  }
-  
-  async createNotification(insertNotification: InsertNotification): Promise<Notification> {
-    const id = this.notificationIdCounter++;
-    const sentAt = new Date();
-    const notification: Notification = { 
-      ...insertNotification, 
-      id, 
-      sentAt,
-      type: insertNotification.type || "announcement",
-      targetUserIds: insertNotification.targetUserIds ?? null,
-      expiresAt: insertNotification.expiresAt ?? null,
-      isActive: insertNotification.isActive ?? true
-    };
-    this.notifications.set(id, notification);
-    return notification;
-  }
-  
-  async updateNotification(id: number, data: Partial<Notification>): Promise<Notification | undefined> {
-    const notification = this.notifications.get(id);
-    if (!notification) return undefined;
-    
-    const updatedNotification = { ...notification, ...data };
-    this.notifications.set(id, updatedNotification);
-    return updatedNotification;
-  }
-  
-  async deleteNotification(id: number): Promise<boolean> {
-    return this.notifications.delete(id);
-  }
-  
-  // Plan methods
-  async getPlans(): Promise<Plan[]> {
-    return Array.from(this.plans.values());
-  }
-  
-  async getPlanById(id: number): Promise<Plan | undefined> {
-    return this.plans.get(id);
-  }
-  
-  async createPlan(insertPlan: InsertPlan): Promise<Plan> {
-    const id = this.planIdCounter++;
-    const createdAt = new Date();
-    const plan: Plan = { 
-      ...insertPlan, 
-      id, 
-      createdAt, 
-      updatedAt: null,
-      isActive: insertPlan.isActive ?? true,
-      billingCycle: insertPlan.billingCycle || "monthly" 
-    };
-    this.plans.set(id, plan);
-    return plan;
-  }
-  
-  async updatePlan(id: number, data: Partial<Plan>): Promise<Plan | undefined> {
-    const plan = this.plans.get(id);
-    if (!plan) return undefined;
-    
-    const updatedPlan = { ...plan, ...data, updatedAt: new Date() };
-    this.plans.set(id, updatedPlan);
-    return updatedPlan;
-  }
 
-  // User methods
+  // User operations
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userIdCounter++;
-    const createdAt = new Date();
-    const user: User = { 
-      ...insertUser, 
-      id, 
-      businessName: null, 
-      industry: null, 
-      monthlyRevenue: null,
-      isAdmin: false,
-      createdAt,
-      lastLoginAt: null,
-      status: "active"
+    // Make sure all required fields are present with defaults if needed
+    const userToInsert = {
+      ...insertUser,
+      currency: insertUser.currency || "USD",
     };
-    this.users.set(id, user);
+
+    const [user] = await db.insert(users).values(userToInsert).returning();
     return user;
   }
 
   async updateUser(id: number, data: Partial<User>): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    
-    const updatedUser = { ...user, ...data };
-    this.users.set(id, updatedUser);
-    return updatedUser;
+    const [user] = await db.update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
+    return user;
   }
 
-  // Transaction methods
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  // Transaction operations
   async getTransactions(userId: number): Promise<Transaction[]> {
-    return Array.from(this.transactions.values()).filter(
-      (transaction) => transaction.userId === userId
-    );
+    return await db.select()
+      .from(transactions)
+      .where(eq(transactions.userId, userId));
   }
 
   async getTransactionById(id: number): Promise<Transaction | undefined> {
-    return this.transactions.get(id);
+    const [transaction] = await db.select()
+      .from(transactions)
+      .where(eq(transactions.id, id));
+    return transaction;
   }
 
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
-    const id = this.transactionIdCounter++;
-    const transaction: Transaction = { 
-      ...insertTransaction, 
-      id,
-      date: insertTransaction.date || new Date(),
-      category: insertTransaction.category ?? null
-    };
-    this.transactions.set(id, transaction);
+    const [transaction] = await db.insert(transactions)
+      .values(insertTransaction)
+      .returning();
     return transaction;
   }
 
   async updateTransaction(id: number, data: Partial<Transaction>): Promise<Transaction | undefined> {
-    const transaction = this.transactions.get(id);
-    if (!transaction) return undefined;
-    
-    const updatedTransaction = { ...transaction, ...data };
-    this.transactions.set(id, updatedTransaction);
-    return updatedTransaction;
+    const [transaction] = await db.update(transactions)
+      .set(data)
+      .where(eq(transactions.id, id))
+      .returning();
+    return transaction;
   }
 
   async deleteTransaction(id: number): Promise<boolean> {
-    return this.transactions.delete(id);
+    const result = await db.delete(transactions)
+      .where(eq(transactions.id, id));
+    return true; // In Drizzle, delete doesn't return a count but we assume success
   }
 
-  // Profit split methods
+  // Profit split operations
   async getProfitSplit(userId: number): Promise<ProfitSplit | undefined> {
-    return Array.from(this.profitSplits.values()).find(
-      (split) => split.userId === userId
-    );
+    const [profitSplit] = await db.select()
+      .from(profitSplits)
+      .where(eq(profitSplits.userId, userId));
+    return profitSplit;
   }
 
   async createProfitSplit(insertProfitSplit: InsertProfitSplit): Promise<ProfitSplit> {
-    const id = this.profitSplitIdCounter++;
-    const profitSplit: ProfitSplit = { 
-      ...insertProfitSplit, 
-      id,
-      ownerPay: insertProfitSplit.ownerPay || 0,
-      reinvestment: insertProfitSplit.reinvestment || 0,
-      savings: insertProfitSplit.savings || 0,
-      taxReserve: insertProfitSplit.taxReserve || 0
-    };
-    this.profitSplits.set(id, profitSplit);
+    const [profitSplit] = await db.insert(profitSplits)
+      .values(insertProfitSplit)
+      .returning();
     return profitSplit;
   }
 
   async updateProfitSplit(id: number, data: Partial<ProfitSplit>): Promise<ProfitSplit | undefined> {
-    const profitSplit = this.profitSplits.get(id);
-    if (!profitSplit) return undefined;
-    
-    const updatedProfitSplit = { ...profitSplit, ...data };
-    this.profitSplits.set(id, updatedProfitSplit);
-    return updatedProfitSplit;
+    const [profitSplit] = await db.update(profitSplits)
+      .set(data)
+      .where(eq(profitSplits.id, id))
+      .returning();
+    return profitSplit;
   }
 
-  // Growth goal methods
+  // Growth goal operations
   async getGrowthGoals(userId: number): Promise<GrowthGoal[]> {
-    return Array.from(this.growthGoals.values()).filter(
-      (goal) => goal.userId === userId
-    );
+    return await db.select()
+      .from(growthGoals)
+      .where(eq(growthGoals.userId, userId));
   }
 
   async getGrowthGoalById(id: number): Promise<GrowthGoal | undefined> {
-    return this.growthGoals.get(id);
+    const [goal] = await db.select()
+      .from(growthGoals)
+      .where(eq(growthGoals.id, id));
+    return goal;
   }
 
   async createGrowthGoal(insertGrowthGoal: InsertGrowthGoal): Promise<GrowthGoal> {
-    const id = this.growthGoalIdCounter++;
-    const createdAt = new Date();
-    const growthGoal: GrowthGoal = { 
-      ...insertGrowthGoal, 
-      id, 
-      createdAt,
-      currentAmount: insertGrowthGoal.currentAmount || 0,
-      targetDate: insertGrowthGoal.targetDate || null,
-      isCompleted: insertGrowthGoal.isCompleted || false
-    };
-    this.growthGoals.set(id, growthGoal);
-    return growthGoal;
+    const [goal] = await db.insert(growthGoals)
+      .values(insertGrowthGoal)
+      .returning();
+    return goal;
   }
 
   async updateGrowthGoal(id: number, data: Partial<GrowthGoal>): Promise<GrowthGoal | undefined> {
-    const growthGoal = this.growthGoals.get(id);
-    if (!growthGoal) return undefined;
-    
-    const updatedGrowthGoal = { ...growthGoal, ...data };
-    this.growthGoals.set(id, updatedGrowthGoal);
-    return updatedGrowthGoal;
+    const [goal] = await db.update(growthGoals)
+      .set(data)
+      .where(eq(growthGoals.id, id))
+      .returning();
+    return goal;
   }
 
   async deleteGrowthGoal(id: number): Promise<boolean> {
-    return this.growthGoals.delete(id);
+    await db.delete(growthGoals)
+      .where(eq(growthGoals.id, id));
+    return true;
   }
 
-  // Onboarding methods
+  async getAllGrowthGoals(): Promise<GrowthGoal[]> {
+    return await db.select().from(growthGoals);
+  }
+
+  // Onboarding operations
   async getOnboarding(userId: number): Promise<Onboarding | undefined> {
-    return Array.from(this.onboardingSteps.values()).find(
-      (step) => step.userId === userId
-    );
+    const [onboardingData] = await db.select()
+      .from(onboarding)
+      .where(eq(onboarding.userId, userId));
+    return onboardingData;
   }
 
   async createOnboarding(insertOnboarding: InsertOnboarding): Promise<Onboarding> {
-    const id = this.onboardingIdCounter++;
-    const onboardingStep: Onboarding = { 
-      ...insertOnboarding, 
-      id,
-      step: insertOnboarding.step || 1,
-      completed: insertOnboarding.completed || false,
-      financialGoals: insertOnboarding.financialGoals || null,
-      bankConnected: insertOnboarding.bankConnected || false
-    };
-    this.onboardingSteps.set(id, onboardingStep);
-    return onboardingStep;
+    const [onboardingData] = await db.insert(onboarding)
+      .values(insertOnboarding)
+      .returning();
+    return onboardingData;
   }
 
   async updateOnboarding(userId: number, data: Partial<Onboarding>): Promise<Onboarding | undefined> {
-    const onboardingStep = Array.from(this.onboardingSteps.values()).find(
-      (step) => step.userId === userId
-    );
-    if (!onboardingStep) return undefined;
-    
-    const updatedOnboarding = { ...onboardingStep, ...data };
-    this.onboardingSteps.set(onboardingStep.id, updatedOnboarding);
-    return updatedOnboarding;
+    const [onboardingData] = await db.update(onboarding)
+      .set(data)
+      .where(eq(onboarding.userId, userId))
+      .returning();
+    return onboardingData;
+  }
+
+  // Support ticket operations
+  async getSupportTickets(): Promise<SupportTicket[]> {
+    return await db.select().from(supportTickets);
+  }
+
+  async getSupportTicketsByUser(userId: number): Promise<SupportTicket[]> {
+    return await db.select()
+      .from(supportTickets)
+      .where(eq(supportTickets.userId, userId));
+  }
+
+  async getSupportTicketById(id: number): Promise<SupportTicket | undefined> {
+    const [ticket] = await db.select()
+      .from(supportTickets)
+      .where(eq(supportTickets.id, id));
+    return ticket;
+  }
+
+  async createSupportTicket(insertTicket: InsertSupportTicket): Promise<SupportTicket> {
+    const [ticket] = await db.insert(supportTickets)
+      .values(insertTicket)
+      .returning();
+    return ticket;
+  }
+
+  async updateSupportTicket(id: number, data: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
+    const [ticket] = await db.update(supportTickets)
+      .set(data)
+      .where(eq(supportTickets.id, id))
+      .returning();
+    return ticket;
+  }
+
+  // Notification operations
+  async getNotifications(): Promise<Notification[]> {
+    return await db.select().from(notifications);
+  }
+
+  async getNotificationById(id: number): Promise<Notification | undefined> {
+    const [notification] = await db.select()
+      .from(notifications)
+      .where(eq(notifications.id, id));
+    return notification;
+  }
+
+  async createNotification(insertNotification: InsertNotification): Promise<Notification> {
+    const [notification] = await db.insert(notifications)
+      .values(insertNotification)
+      .returning();
+    return notification;
+  }
+
+  async updateNotification(id: number, data: Partial<Notification>): Promise<Notification | undefined> {
+    const [notification] = await db.update(notifications)
+      .set(data)
+      .where(eq(notifications.id, id))
+      .returning();
+    return notification;
+  }
+
+  async deleteNotification(id: number): Promise<boolean> {
+    await db.delete(notifications)
+      .where(eq(notifications.id, id));
+    return true;
+  }
+
+  // Plan operations
+  async getPlans(): Promise<Plan[]> {
+    return await db.select().from(plans);
+  }
+
+  async getPlanById(id: number): Promise<Plan | undefined> {
+    const [plan] = await db.select()
+      .from(plans)
+      .where(eq(plans.id, id));
+    return plan;
+  }
+
+  async createPlan(insertPlan: InsertPlan): Promise<Plan> {
+    const [plan] = await db.insert(plans)
+      .values(insertPlan)
+      .returning();
+    return plan;
+  }
+
+  async updatePlan(id: number, data: Partial<Plan>): Promise<Plan | undefined> {
+    const [plan] = await db.update(plans)
+      .set(data)
+      .where(eq(plans.id, id))
+      .returning();
+    return plan;
   }
 }
 
-export const storage = new MemStorage();
+// Use the database storage implementation
+export const storage = new DatabaseStorage();

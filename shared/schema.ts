@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
   lastLoginAt: timestamp("last_login_at"),
   status: text("status").default("active"), // active, suspended, deleted
+  currency: text("currency").default("USD").notNull(), // Default to USD, user can change it
 });
 
 // Transactions table
@@ -63,6 +64,10 @@ export const onboarding = pgTable("onboarding", {
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  currency: true,
+  businessName: true,
+  industry: true,
+  monthlyRevenue: true,
 });
 
 export const insertTransactionSchema = createInsertSchema(transactions).omit({
