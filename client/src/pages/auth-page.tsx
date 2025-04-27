@@ -17,6 +17,13 @@ import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "wouter";
 import { insertUserSchema } from "@shared/schema";
 import { MainLayout } from "@/components/layouts/MainLayout";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const loginSchema = z.object({
   username: z.string().email("Please enter a valid email address"),
@@ -28,6 +35,7 @@ const registerSchema = insertUserSchema.extend({
   username: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   fullName: z.string().min(2, "Full name is required"),
+  currency: z.string().default("USD"),
   termsAccepted: z.boolean().refine((val) => val === true, {
     message: "You must accept the terms and conditions",
   }),
@@ -58,6 +66,7 @@ export default function AuthPage() {
       username: "",
       password: "",
       fullName: "",
+      currency: "USD",
       termsAccepted: false,
     },
   });
@@ -73,6 +82,7 @@ export default function AuthPage() {
     registerMutation.mutate({
       username: data.username,
       password: data.password,
+      currency: data.currency,
     });
   };
 
