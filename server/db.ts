@@ -51,11 +51,15 @@ if (process.env.DATABASE_URL) {
     
     // Add async connection test that won't block startup
     setTimeout(async () => {
+      if (!pool) return;
+      
       try {
-        const client = await pool?.connect();
-        await client.query('SELECT 1');
-        console.log('Database connection confirmed working');
-        client.release();
+        const client = await pool.connect();
+        if (client) {
+          await client.query('SELECT 1');
+          console.log('Database connection confirmed working');
+          client.release();
+        }
       } catch (err) {
         console.warn('Database connection test failed, fallback to memory storage may be used:', err);
       }

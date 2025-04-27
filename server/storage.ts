@@ -15,6 +15,8 @@ import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import createMemoryStore from "memorystore";
 import { handleDatabaseError } from "./error-handler";
+// Import memory storage implementation
+import { MemoryStorage } from "./memory-storage";
 
 const PostgresSessionStore = connectPg(session);
 const MemoryStore = createMemoryStore(session);
@@ -509,17 +511,381 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Create the storage implementation with database or fallback
-let storageImpl: IStorage;
+// Create a hybrid storage implementation that falls back to memory storage if database operations fail
+class HybridStorage implements IStorage {
+  private dbStorage: DatabaseStorage;
+  private memStorage: any; // MemoryStorage
+  private useMemoryStorageFallback: boolean = false;
+  sessionStore: session.Store;
 
-try {
-  storageImpl = new DatabaseStorage();
-} catch (error) {
-  console.warn('Failed to create database storage, falling back to memory storage:', error);
+  constructor() {
+    // Create the database storage
+    this.dbStorage = new DatabaseStorage();
+    this.sessionStore = this.dbStorage.sessionStore;
+    
+    // Initialize memory storage as a fallback
+    this.memStorage = new MemoryStorage();
+    
+    // Initialize health check for database
+    this.checkDatabaseHealth();
+  }
   
-  // Import and use memory storage if database connection fails
-  const { MemoryStorage } = require('./memory-storage');
-  storageImpl = new MemoryStorage();
+  // Periodically check database health
+  private checkDatabaseHealth() {
+    setInterval(async () => {
+      try {
+        if (pool) {
+          const client = await pool.connect();
+          await client.query('SELECT 1');
+          client.release();
+          
+          if (this.useMemoryStorageFallback) {
+            console.log('Database connection restored. Switching back to database storage.');
+            this.useMemoryStorageFallback = false;
+          }
+        }
+      } catch (error) {
+        if (!this.useMemoryStorageFallback) {
+          console.warn('Database health check failed. Switching to memory storage fallback:', error);
+          this.useMemoryStorageFallback = true;
+        }
+      }
+    }, 30000); // Check every 30 seconds
+  }
+  
+  // Helper method to try database operation with fallback to memory
+  private async tryDbWithFallback<T>(
+    dbOperation: () => Promise<T>,
+    memOperation: () => Promise<T>,
+    operationName: string
+  ): Promise<T> {
+    // If already using memory fallback, don't try database
+    if (this.useMemoryStorageFallback) {
+      return await memOperation();
+    }
+    
+    try {
+      return await dbOperation();
+    } catch (error) {
+      console.warn(`Database operation '${operationName}' failed, using memory fallback:`, error);
+      this.useMemoryStorageFallback = true;
+      return await memOperation();
+    }
+  }
+
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getUser(id),
+      () => this.memStorage.getUser(id),
+      `getUser(${id})`
+    );
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getUserByUsername(username),
+      () => this.memStorage.getUserByUsername(username),
+      `getUserByUsername(${username})`
+    );
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.createUser(insertUser),
+      () => this.memStorage.createUser(insertUser),
+      `createUser`
+    );
+  }
+
+  async updateUser(id: number, data: Partial<User>): Promise<User | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.updateUser(id, data),
+      () => this.memStorage.updateUser(id, data),
+      `updateUser(${id})`
+    );
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getAllUsers(),
+      () => this.memStorage.getAllUsers(),
+      `getAllUsers`
+    );
+  }
+
+  // For all other methods, simply delegate to the appropriate storage
+  // based on database availability
+
+  // Transaction operations
+  async getTransactions(userId: number): Promise<Transaction[]> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getTransactions(userId),
+      () => this.memStorage.getTransactions(userId),
+      `getTransactions(${userId})`
+    );
+  }
+
+  async getTransactionById(id: number): Promise<Transaction | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getTransactionById(id),
+      () => this.memStorage.getTransactionById(id),
+      `getTransactionById(${id})`
+    );
+  }
+
+  async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.createTransaction(insertTransaction),
+      () => this.memStorage.createTransaction(insertTransaction),
+      `createTransaction`
+    );
+  }
+
+  async updateTransaction(id: number, data: Partial<Transaction>): Promise<Transaction | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.updateTransaction(id, data),
+      () => this.memStorage.updateTransaction(id, data),
+      `updateTransaction(${id})`
+    );
+  }
+
+  async deleteTransaction(id: number): Promise<boolean> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.deleteTransaction(id),
+      () => this.memStorage.deleteTransaction(id),
+      `deleteTransaction(${id})`
+    );
+  }
+
+  // All other methods follow the same pattern
+  // Implementing complete interface required by IStorage
+  
+  // Profit split operations
+  async getProfitSplit(userId: number): Promise<ProfitSplit | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getProfitSplit(userId),
+      () => this.memStorage.getProfitSplit(userId),
+      `getProfitSplit(${userId})`
+    );
+  }
+
+  async createProfitSplit(insertProfitSplit: InsertProfitSplit): Promise<ProfitSplit> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.createProfitSplit(insertProfitSplit),
+      () => this.memStorage.createProfitSplit(insertProfitSplit),
+      `createProfitSplit`
+    );
+  }
+
+  async updateProfitSplit(id: number, data: Partial<ProfitSplit>): Promise<ProfitSplit | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.updateProfitSplit(id, data),
+      () => this.memStorage.updateProfitSplit(id, data),
+      `updateProfitSplit(${id})`
+    );
+  }
+
+  // Growth goal operations
+  async getGrowthGoals(userId: number): Promise<GrowthGoal[]> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getGrowthGoals(userId),
+      () => this.memStorage.getGrowthGoals(userId),
+      `getGrowthGoals(${userId})`
+    );
+  }
+
+  async getGrowthGoalById(id: number): Promise<GrowthGoal | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getGrowthGoalById(id),
+      () => this.memStorage.getGrowthGoalById(id),
+      `getGrowthGoalById(${id})`
+    );
+  }
+
+  async createGrowthGoal(insertGrowthGoal: InsertGrowthGoal): Promise<GrowthGoal> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.createGrowthGoal(insertGrowthGoal),
+      () => this.memStorage.createGrowthGoal(insertGrowthGoal),
+      `createGrowthGoal`
+    );
+  }
+
+  async updateGrowthGoal(id: number, data: Partial<GrowthGoal>): Promise<GrowthGoal | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.updateGrowthGoal(id, data),
+      () => this.memStorage.updateGrowthGoal(id, data),
+      `updateGrowthGoal(${id})`
+    );
+  }
+
+  async deleteGrowthGoal(id: number): Promise<boolean> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.deleteGrowthGoal(id),
+      () => this.memStorage.deleteGrowthGoal(id),
+      `deleteGrowthGoal(${id})`
+    );
+  }
+
+  async getAllGrowthGoals(): Promise<GrowthGoal[]> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getAllGrowthGoals(),
+      () => this.memStorage.getAllGrowthGoals(),
+      `getAllGrowthGoals`
+    );
+  }
+
+  // Onboarding operations
+  async getOnboarding(userId: number): Promise<Onboarding | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getOnboarding(userId),
+      () => this.memStorage.getOnboarding(userId),
+      `getOnboarding(${userId})`
+    );
+  }
+
+  async createOnboarding(insertOnboarding: InsertOnboarding): Promise<Onboarding> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.createOnboarding(insertOnboarding),
+      () => this.memStorage.createOnboarding(insertOnboarding),
+      `createOnboarding`
+    );
+  }
+
+  async updateOnboarding(userId: number, data: Partial<Onboarding>): Promise<Onboarding | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.updateOnboarding(userId, data),
+      () => this.memStorage.updateOnboarding(userId, data),
+      `updateOnboarding(${userId})`
+    );
+  }
+
+  // Support ticket operations
+  async getSupportTickets(): Promise<SupportTicket[]> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getSupportTickets(),
+      () => this.memStorage.getSupportTickets(),
+      `getSupportTickets`
+    );
+  }
+
+  async getSupportTicketsByUser(userId: number): Promise<SupportTicket[]> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getSupportTicketsByUser(userId),
+      () => this.memStorage.getSupportTicketsByUser(userId),
+      `getSupportTicketsByUser(${userId})`
+    );
+  }
+
+  async getSupportTicketById(id: number): Promise<SupportTicket | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getSupportTicketById(id),
+      () => this.memStorage.getSupportTicketById(id),
+      `getSupportTicketById(${id})`
+    );
+  }
+
+  async createSupportTicket(insertTicket: InsertSupportTicket): Promise<SupportTicket> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.createSupportTicket(insertTicket),
+      () => this.memStorage.createSupportTicket(insertTicket),
+      `createSupportTicket`
+    );
+  }
+
+  async updateSupportTicket(id: number, data: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.updateSupportTicket(id, data),
+      () => this.memStorage.updateSupportTicket(id, data),
+      `updateSupportTicket(${id})`
+    );
+  }
+
+  // Notification operations
+  async getNotifications(): Promise<Notification[]> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getNotifications(),
+      () => this.memStorage.getNotifications(),
+      `getNotifications`
+    );
+  }
+
+  async getNotificationById(id: number): Promise<Notification | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getNotificationById(id),
+      () => this.memStorage.getNotificationById(id),
+      `getNotificationById(${id})`
+    );
+  }
+
+  async createNotification(insertNotification: InsertNotification): Promise<Notification> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.createNotification(insertNotification),
+      () => this.memStorage.createNotification(insertNotification),
+      `createNotification`
+    );
+  }
+
+  async updateNotification(id: number, data: Partial<Notification>): Promise<Notification | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.updateNotification(id, data),
+      () => this.memStorage.updateNotification(id, data),
+      `updateNotification(${id})`
+    );
+  }
+
+  async deleteNotification(id: number): Promise<boolean> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.deleteNotification(id),
+      () => this.memStorage.deleteNotification(id),
+      `deleteNotification(${id})`
+    );
+  }
+
+  // Plan operations
+  async getPlans(): Promise<Plan[]> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getPlans(),
+      () => this.memStorage.getPlans(),
+      `getPlans`
+    );
+  }
+
+  async getPlanById(id: number): Promise<Plan | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.getPlanById(id),
+      () => this.memStorage.getPlanById(id),
+      `getPlanById(${id})`
+    );
+  }
+
+  async createPlan(insertPlan: InsertPlan): Promise<Plan> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.createPlan(insertPlan),
+      () => this.memStorage.createPlan(insertPlan),
+      `createPlan`
+    );
+  }
+
+  async updatePlan(id: number, data: Partial<Plan>): Promise<Plan | undefined> {
+    return this.tryDbWithFallback(
+      () => this.dbStorage.updatePlan(id, data),
+      () => this.memStorage.updatePlan(id, data),
+      `updatePlan(${id})`
+    );
+  }
 }
 
-export const storage = storageImpl;
+// Create a storage instance based on database availability
+let storage: IStorage;
+
+try {
+  storage = new DatabaseStorage();
+  console.log('Using database storage implementation');
+} catch (error) {
+  console.warn('Failed to initialize database storage, falling back to memory storage:', error);
+  storage = new MemoryStorage();
+  console.log('Using memory storage implementation');
+}
+
+export { storage };
