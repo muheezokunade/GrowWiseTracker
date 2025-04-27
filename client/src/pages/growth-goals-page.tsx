@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { GrowthGoal } from "@shared/schema";
 import { useLocation } from "wouter";
 import queryString from "query-string";
+import { AddCashForm } from "@/components/goals/AddCashForm";
 
 export default function GrowthGoalsPage() {
   const { toast } = useToast();
@@ -18,6 +19,7 @@ export default function GrowthGoalsPage() {
   const params = queryString.parse(location.split('?')[1] || '');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(params.action === "create");
   const [editingGoal, setEditingGoal] = useState<GrowthGoal | null>(null);
+  const [addCashGoal, setAddCashGoal] = useState<GrowthGoal | null>(null);
 
   // Fetch growth goals
   const { data: goals, isLoading } = useQuery<GrowthGoal[]>({
@@ -90,6 +92,30 @@ export default function GrowthGoalsPage() {
       });
     },
   });
+  
+  // Add cash to goal mutation
+  const addCashToGoal = useMutation({
+    mutationFn: async ({ id, amountToAdd }: { id: number; amountToAdd: number }) => {
+      const res = await apiRequest("POST", `/api/growth-goals/${id}/add-cash`, { amountToAdd });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/growth-goals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+      toast({
+        title: "Cash added",
+        description: "Cash has been added to your growth goal successfully.",
+      });
+      setAddCashGoal(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to add cash",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const formatDateForSubmission = (data: any) => {
     const formattedData = { ...data };
@@ -124,6 +150,19 @@ export default function GrowthGoalsPage() {
   const handleEditGoal = (goal: GrowthGoal) => {
     setEditingGoal(goal);
   };
+  
+  const handleAddCash = (goal: GrowthGoal) => {
+    setAddCashGoal(goal);
+  };
+  
+  const handleSubmitAddCash = (data: { amountToAdd: number }) => {
+    if (addCashGoal) {
+      addCashToGoal.mutate({ 
+        id: addCashGoal.id, 
+        amountToAdd: data.amountToAdd 
+      });
+    }
+  };
 
   return (
     <MainLayout title="Growth Goals">
@@ -153,6 +192,7 @@ export default function GrowthGoalsPage() {
                 goal={goal}
                 onEdit={() => handleEditGoal(goal)}
                 onDelete={() => handleDeleteGoal(goal.id)}
+                onAddCash={() => handleAddCash(goal)}
               />
             ))}
           </div>
@@ -195,6 +235,23 @@ export default function GrowthGoalsPage() {
                 onSubmit={handleUpdateGoal}
                 isSubmitting={updateGoal.isPending}
                 initialData={editingGoal}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+        
+        {/* Add Cash Dialog */}
+        <Dialog open={!!addCashGoal} onOpenChange={(open) => !open && setAddCashGoal(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Cash to Goal</DialogTitle>
+            </DialogHeader>
+            {addCashGoal && (
+              <AddCashForm
+                onSubmit={handleSubmitAddCash}
+                isSubmitting={addCashToGoal.isPending}
+                currentAmount={addCashGoal.currentAmount}
+                targetAmount={addCashGoal.targetAmount}
               />
             )}
           </DialogContent>
