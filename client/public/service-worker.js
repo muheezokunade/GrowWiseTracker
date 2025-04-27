@@ -7,14 +7,21 @@ const STATIC_ASSETS = [
   '/index.html',
   '/manifest.json',
   '/offline.html',
-  // Key static resources (these paths are relative to the deployed app)
-  // The app will use esbuild to bundle resources, so we only cache main entry points
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
+  '/icons/maskable-icon.png',
+  '/icons/apple-touch-icon.png',
+  '/icon-192x192.svg',
+  '/icon-512x512.svg',
+  '/screenshot.svg'
 ];
 
 // Pages to pre-cache for better offline experience
 const PRECACHE_PAGES = [
   '/dashboard',
-  '/transactions'
+  '/transactions',
+  '/profit-split',
+  '/growth-goals'
 ];
 
 // Install event - Cache static assets and offline fallback
