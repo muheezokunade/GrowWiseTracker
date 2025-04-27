@@ -1,8 +1,10 @@
 import PDFDocument from 'pdfkit';
-import PdfTable from 'pdfkit-table';
 import { Transaction } from '@shared/schema';
 import fs from 'fs';
 import path from 'path';
+
+// Type definitions for PDFDocument - reference to our custom .d.ts file
+type PDFKit = typeof PDFDocument;
 
 // Ensure the uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -320,7 +322,7 @@ export async function generateGrowthReport(
 
 // Helper functions
 
-function addHeader(doc: PDFKit.PDFDocument, options: ReportOptions) {
+function addHeader(doc: any, options: ReportOptions) {
   // GrowWise logo and title - for now just text until we have a logo
   doc.fontSize(24).font('Helvetica-Bold').text('GrowWise', { align: 'center' });
   doc.fontSize(18).font('Helvetica').text(`${options.title}`, { align: 'center' });
@@ -334,7 +336,7 @@ function addHeader(doc: PDFKit.PDFDocument, options: ReportOptions) {
   doc.moveDown(2);
 }
 
-function addSummaryBoxes(doc: PDFKit.PDFDocument, items: { label: string; value: string; isPositive?: boolean }[]) {
+function addSummaryBoxes(doc: any, items: { label: string; value: string; isPositive?: boolean }[]) {
   const width = (doc.page.width - doc.page.margins.left - doc.page.margins.right) / 4;
   const height = 70;
   const startX = doc.page.margins.left;
