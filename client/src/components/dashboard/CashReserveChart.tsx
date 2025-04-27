@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { useCurrency } from "@/hooks/use-currency";
+import { formatDate as formatDateUtil } from "@/lib/utils";
 
 interface CashReserveChartProps {
   data: Array<{ date: string; amount: number }>;
@@ -8,15 +10,7 @@ interface CashReserveChartProps {
 
 export function CashReserveChart({ data, availableAmount }: CashReserveChartProps) {
   const [hoveredValue, setHoveredValue] = useState<number | null>(null);
-  
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const { formatCurrency, currencyCode } = useCurrency();
   
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -36,6 +30,23 @@ export function CashReserveChart({ data, availableAmount }: CashReserveChartProp
     setHoveredValue(null);
     return null;
   };
+  
+  // Check if data is empty and return a placeholder
+  if (!data || data.length === 0) {
+    return (
+      <div className="bg-white p-4 rounded-xl shadow-sm mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="font-heading font-semibold">Cash Reserve</h2>
+          <div className="text-sm text-gray-600">
+            {formatCurrency(availableAmount)} available
+          </div>
+        </div>
+        <div className="h-48 flex items-center justify-center">
+          <p className="text-gray-500">No data available</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="bg-white p-4 rounded-xl shadow-sm mb-6">
@@ -68,11 +79,21 @@ export function CashReserveChart({ data, availableAmount }: CashReserveChartProp
               tick={{ fontSize: 12, fill: '#888' }}
             />
             <YAxis 
-              tickFormatter={(value) => `$${value}`}
+              tickFormatter={(value) => {
+                // Format based on currency but simplified for axis labels
+                const formatter = new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: currencyCode,
+                  notation: 'compact',
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                });
+                return formatter.format(value);
+              }}
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 12, fill: '#888' }}
-              width={50}
+              width={60}
             />
             <Tooltip content={customTooltip} />
             <Area 

@@ -7,10 +7,80 @@ import {
   insertTransactionSchema, 
   insertGrowthGoalSchema, 
   insertProfitSplitSchema,
-  insertOnboardingSchema 
+  insertOnboardingSchema,
+  Transaction
 } from "@shared/schema";
 import { registerAdminRoutes } from "./admin-routes";
 import { registerUserAdminRoutes } from "./user-admin-routes";
+
+// Helper function to generate cash reserve chart data based on transactions
+function generateCashReserveData(transactions: Transaction[]) {
+  const now = new Date();
+  const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+  
+  // Create date points from two months ago to current date (5 data points)
+  const datePoints: Date[] = [];
+  for (let i = 0; i < 5; i++) {
+    const pointDate = new Date(twoMonthsAgo);
+    pointDate.setDate(15); // Middle of month
+    pointDate.setMonth(pointDate.getMonth() + Math.floor(i / 2));
+    
+    // Offset by 15 days for even indices to get start/mid month pattern
+    if (i % 2 === 1) {
+      pointDate.setDate(1);
+      pointDate.setMonth(pointDate.getMonth() + 1);
+    }
+    
+    // Make sure we don't exceed the current date
+    if (pointDate > now) {
+      pointDate.setTime(now.getTime());
+    }
+    
+    datePoints.push(pointDate);
+  }
+  
+  // Sort transactions by date
+  const sortedTransactions = [...transactions].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+  
+  // Generate cash reserve data for each date point
+  const cashReserveData = datePoints.map((date) => {
+    // Sum all transactions up to this date point
+    const relevantTransactions = sortedTransactions.filter(
+      (t) => new Date(t.date) <= date
+    );
+    
+    // Calculate balance at this point
+    let balance = 0;
+    for (const transaction of relevantTransactions) {
+      if (transaction.type === "income") {
+        balance += transaction.amount;
+      } else if (transaction.type === "expense") {
+        balance -= transaction.amount;
+      }
+    }
+    
+    // Ensure we don't have negative values for chart display purposes
+    // In a real app, you might want to show negative balances
+    balance = Math.max(0, balance);
+    
+    return {
+      date: date.toISOString().split('T')[0], // Format as YYYY-MM-DD
+      amount: balance,
+    };
+  });
+  
+  // Ensure we have at least one data point
+  if (cashReserveData.length === 0) {
+    cashReserveData.push({
+      date: now.toISOString().split('T')[0],
+      amount: 0,
+    });
+  }
+  
+  return cashReserveData;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -397,6 +467,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const profit = revenue - expenses;
       
+      // Calculate cash reserve data points for the chart
+      // Create 5 data points from 2 months ago to current date
+      const cashReserveData = generateCashReserveData(transactions);
+      
       // Get profit split percentages
       const profitSplit = await storage.getProfitSplit(req.user.id);
       
@@ -409,8 +483,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           revenue,
           expenses,
           profit,
-          cashReserve: 15750, // Placeholder for now
+          cashReserve: cashReserveData[cashReserveData.length - 1].amount,
         },
+        cashReserveData: cashReserveData,
         profitSplit: profitSplit || {
           ownerPay: 40,
           reinvestment: 30,

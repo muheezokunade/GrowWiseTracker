@@ -7,15 +7,7 @@ import { TransactionItem } from "@/components/transactions/TransactionItem";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { Loader2, PlusCircle, TrendingUp, BadgeDollarSign } from "lucide-react";
-
-// Sample cash reserve data
-const sampleCashReserveData = [
-  { date: "2023-02-01", amount: 10000 },
-  { date: "2023-02-15", amount: 11200 },
-  { date: "2023-03-01", amount: 12500 },
-  { date: "2023-03-15", amount: 14000 },
-  { date: "2023-04-01", amount: 15750 },
-];
+import { Transaction } from "@shared/schema";
 
 // Smart suggestions
 const smartSuggestions = [
@@ -29,9 +21,27 @@ const smartSuggestions = [
   },
 ];
 
+interface DashboardData {
+  summary: {
+    revenue: number;
+    expenses: number;
+    profit: number;
+    cashReserve: number;
+  };
+  cashReserveData: Array<{ date: string; amount: number }>;
+  recentTransactions: Array<any>; // Using any for simplicity, could define proper Transaction type
+  growthGoals: Array<any>;
+  profitSplit?: {
+    ownerPay: number;
+    reinvestment: number;
+    savings: number;
+    taxReserve: number;
+  };
+}
+
 export default function DashboardPage() {
   // Fetch dashboard summary
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard/summary"],
   });
   
@@ -103,7 +113,7 @@ export default function DashboardPage() {
         
         {/* Cash Reserve Graph Card */}
         <CashReserveChart
-          data={sampleCashReserveData}
+          data={data?.cashReserveData || []}
           availableAmount={summary.cashReserve}
         />
         
