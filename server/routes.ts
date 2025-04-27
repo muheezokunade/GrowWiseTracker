@@ -185,10 +185,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to update this transaction" });
       }
       
-      const updatedTransaction = await storage.updateTransaction(transactionId, req.body);
+      // Create a validation schema that doesn't require userId and allows partial updates
+      const updateTransactionSchema = insertTransactionSchema
+        .partial()
+        .omit({ userId: true });
+
+      // Validate the data
+      const validatedData = updateTransactionSchema.parse(req.body);
+      
+      const updatedTransaction = await storage.updateTransaction(transactionId, validatedData);
       res.json(updatedTransaction);
     } catch (error) {
-      res.status(500).json({ message: "Failed to update transaction" });
+      console.error("Transaction update error:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid transaction data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update transaction" });
+      }
     }
   });
 

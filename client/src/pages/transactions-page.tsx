@@ -102,7 +102,19 @@ export default function TransactionsPage() {
   // Edit transaction mutation
   const editMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<TransactionFormValues> }) => {
-      const res = await apiRequest("PUT", `/api/transactions/${id}`, data);
+      // Ensure date is in the correct format
+      let formattedData = { ...data };
+      if (formattedData.date) {
+        // Ensure date is in YYYY-MM-DD format for the server
+        if (typeof formattedData.date === 'string') {
+          if (formattedData.date.includes('/')) {
+            const [day, month, year] = formattedData.date.split('/');
+            formattedData.date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          }
+        }
+      }
+
+      const res = await apiRequest("PUT", `/api/transactions/${id}`, formattedData);
       return res.json();
     },
     onSuccess: () => {
@@ -184,21 +196,10 @@ export default function TransactionsPage() {
   // Handle editing a transaction
   const onEditSubmit = (data: TransactionFormValues) => {
     if (currentTransaction) {
-      // Ensure date is in the correct format 'YYYY-MM-DD'
-      let formattedData = { ...data };
-      
-      // Format the date to ensure it's in the expected format
-      if (formattedData.date) {
-        // If date is in DD/MM/YYYY format, convert to YYYY-MM-DD
-        if (formattedData.date.includes('/')) {
-          const [day, month, year] = formattedData.date.split('/');
-          formattedData.date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-        }
-      }
-      
+      // Directly use the data from the form as editMutation already handles date formatting
       editMutation.mutate({
         id: currentTransaction.id,
-        data: formattedData,
+        data: data,
       });
     }
   };

@@ -1,5 +1,5 @@
 // Service Worker for GrowWise PWA
-const CACHE_NAME = 'growwise-cache-v1';
+const CACHE_NAME = 'growwise-cache-v2';
 
 // Assets to pre-cache
 const STATIC_ASSETS = [
@@ -7,12 +7,9 @@ const STATIC_ASSETS = [
   '/index.html',
   '/manifest.json',
   '/offline.html',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
-  '/icons/maskable-icon.png',
-  '/icons/apple-touch-icon.png',
   '/icon-192x192.svg',
   '/icon-512x512.svg',
+  '/apple-touch-icon.svg',
   '/screenshot.svg'
 ];
 
