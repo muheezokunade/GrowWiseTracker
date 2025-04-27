@@ -8,8 +8,20 @@ type BeforeInstallPromptEvent = Event & {
 export function usePwaInstall() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
-  // Save the install prompt event when it occurs
+  // Detect iOS
+  useEffect(() => {
+    // Check if the user is on iOS
+    const iosDeviceRegex = /iPad|iPhone|iPod/;
+    if (iosDeviceRegex.test(navigator.userAgent) && !window.matchMedia('(display-mode: standalone)').matches) {
+      setIsIOS(true);
+      // iOS doesn't support beforeinstallprompt, but we can show install instructions
+      setIsInstallable(true);
+    }
+  }, []);
+
+  // Save the install prompt event when it occurs (for non-iOS devices)
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
       // Prevent Chrome 67 and earlier from automatically showing the prompt
@@ -34,6 +46,12 @@ export function usePwaInstall() {
 
   // Function to prompt user to install the app
   const promptInstall = async () => {
+    // For iOS, show instructions instead of programmatic install
+    if (isIOS) {
+      alert('To install GrowWise on your iOS device: \n\n1. Tap the Share button in Safari\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" in the upper-right corner');
+      return;
+    }
+
     if (!installPrompt) {
       console.log('No installation prompt available');
       return;
@@ -56,5 +74,5 @@ export function usePwaInstall() {
     }
   };
 
-  return { isInstallable, promptInstall };
+  return { isInstallable, promptInstall, isIOS };
 }

@@ -83,7 +83,7 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
-  const { isInstallable, promptInstall } = usePwaInstall();
+  const { isInstallable, promptInstall, isIOS } = usePwaInstall();
   const [activeTab, setActiveTab] = useState("profile");
 
   // Define a type for business profile
@@ -561,7 +561,25 @@ export default function SettingsPage() {
                   <p className="text-sm text-gray-600 mb-3">
                     Install GrowWise as a standalone app for quicker access, even when offline.
                   </p>
-                  {isInstallable ? (
+                  
+                  {isIOS ? (
+                    <div className="space-y-3">
+                      <Button
+                        className="bg-[#27AE60] hover:bg-[#219653]"
+                        onClick={promptInstall}
+                      >
+                        Install on iOS
+                      </Button>
+                      <div className="text-sm text-amber-600 p-3 bg-amber-50 rounded-md">
+                        <p className="font-medium mb-1">iOS Installation:</p>
+                        <ol className="list-decimal pl-5 space-y-1">
+                          <li>Tap the share icon in Safari</li>
+                          <li>Scroll down and tap "Add to Home Screen"</li>
+                          <li>Tap "Add" in the upper right</li>
+                        </ol>
+                      </div>
+                    </div>
+                  ) : isInstallable ? (
                     <Button 
                       className="bg-[#27AE60] hover:bg-[#219653]"
                       onClick={promptInstall}
