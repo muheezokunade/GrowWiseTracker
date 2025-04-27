@@ -45,7 +45,17 @@ const transactionFormSchema = z.object({
   amount: z.coerce.number().positive("Amount must be positive"),
   type: z.enum(["income", "expense"]),
   category: z.string().optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  date: z.string().refine(
+    (val) => {
+      // Accept either YYYY-MM-DD, DD/MM/YYYY, or MM/DD/YYYY formats
+      return (
+        /^\d{4}-\d{2}-\d{2}$/.test(val) || 
+        /^\d{2}\/\d{2}\/\d{4}$/.test(val) ||
+        /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)
+      );
+    }, 
+    { message: "Date must be in a valid format (YYYY-MM-DD or DD/MM/YYYY)" }
+  ),
 });
 
 type TransactionFormValues = z.infer<typeof transactionFormSchema>;
@@ -156,15 +166,39 @@ export default function TransactionsPage() {
 
   // Handle adding a new transaction
   const onAddSubmit = (data: TransactionFormValues) => {
-    addMutation.mutate(data);
+    // Ensure date is in the correct format 'YYYY-MM-DD'
+    let formattedData = { ...data };
+    
+    // Format the date to ensure it's in the expected format
+    if (formattedData.date) {
+      // If date is in DD/MM/YYYY format, convert to YYYY-MM-DD
+      if (formattedData.date.includes('/')) {
+        const [day, month, year] = formattedData.date.split('/');
+        formattedData.date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+    }
+    
+    addMutation.mutate(formattedData);
   };
 
   // Handle editing a transaction
   const onEditSubmit = (data: TransactionFormValues) => {
     if (currentTransaction) {
+      // Ensure date is in the correct format 'YYYY-MM-DD'
+      let formattedData = { ...data };
+      
+      // Format the date to ensure it's in the expected format
+      if (formattedData.date) {
+        // If date is in DD/MM/YYYY format, convert to YYYY-MM-DD
+        if (formattedData.date.includes('/')) {
+          const [day, month, year] = formattedData.date.split('/');
+          formattedData.date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+      }
+      
       editMutation.mutate({
         id: currentTransaction.id,
-        data,
+        data: formattedData,
       });
     }
   };

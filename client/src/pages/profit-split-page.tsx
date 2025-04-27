@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/use-currency";
+import { ProfitSplit } from "@shared/schema";
 
 interface ProfitSplitFormState {
   ownerPay: number;
@@ -29,7 +30,7 @@ export default function ProfitSplitPage() {
   });
 
   // Fetch profit split and dashboard data
-  const { data: profitSplitData, isLoading: isLoadingProfitSplit } = useQuery({
+  const { data: profitSplitData, isLoading: isLoadingProfitSplit } = useQuery<ProfitSplit>({
     queryKey: ["/api/profit-split"],
   });
   
@@ -45,7 +46,15 @@ export default function ProfitSplitPage() {
     }
   }, [profitSplitData]);
 
-  const { data: dashboardData, isLoading: isLoadingDashboard } = useQuery({
+  interface DashboardSummary {
+    summary: {
+      profit: number;
+      revenue: number;
+      expenses: number;
+    };
+  }
+
+  const { data: dashboardData, isLoading: isLoadingDashboard } = useQuery<DashboardSummary>({
     queryKey: ["/api/dashboard/summary"],
   });
 
