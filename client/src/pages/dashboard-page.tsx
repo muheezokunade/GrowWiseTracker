@@ -29,7 +29,7 @@ interface DashboardData {
     cashReserve: number;
   };
   cashReserveData: Array<{ date: string; amount: number }>;
-  recentTransactions: Array<any>; // Using any for simplicity, could define proper Transaction type
+  recentTransactions: Array<Transaction>;
   growthGoals: Array<any>;
   profitSplit?: {
     ownerPay: number;
