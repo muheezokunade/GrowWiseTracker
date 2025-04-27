@@ -360,6 +360,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update growth goal" });
     }
   });
+  
+  // Add cash to a growth goal
+  app.post("/api/growth-goals/:id/add-cash", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const goalId = parseInt(req.params.id);
+      const goal = await storage.getGrowthGoalById(goalId);
+      
+      if (!goal) {
+        return res.status(404).json({ message: "Growth goal not found" });
+      }
+      
+      // Check authorization
+      if (goal.userId !== req.user.id) {
+        return res.status(403).json({ message: "Not authorized to update this goal" });
+      }
+      
+      const { amountToAdd } = req.body;
+      
+      if (typeof amountToAdd !== 'number' || amountToAdd <= 0) {
+        return res.status(400).json({ message: "Amount to add must be a positive number" });
+      }
+      
+      // Calculate new current amount
+      const newCurrentAmount = goal.currentAmount + amountToAdd;
+      
+      // Check if goal is now completed
+      const isCompleted = newCurrentAmount >= goal.targetAmount;
+      
+      // Update the goal
+      const updatedGoal = await storage.updateGrowthGoal(goalId, {
+        currentAmount: newCurrentAmount,
+        isCompleted: isCompleted
+      });
+      
+      res.json(updatedGoal);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to add cash to growth goal" });
+    }
+  });
 
   // Delete growth goal
   app.delete("/api/growth-goals/:id", async (req, res) => {

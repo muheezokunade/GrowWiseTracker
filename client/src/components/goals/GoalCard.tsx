@@ -3,16 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { formatDate, calculateDaysUntil, calculateProgressPercentage } from "@/lib/utils";
 import { useCurrency } from "@/hooks/use-currency";
-import { CalendarClock, Edit, Trash2 } from "lucide-react";
+import { CalendarClock, Edit, Trash2, PlusCircle } from "lucide-react";
 import { GrowthGoal } from "@shared/schema";
 
 interface GoalCardProps {
   goal: GrowthGoal;
   onEdit: () => void;
   onDelete: () => void;
+  onAddCash: () => void;
 }
 
-export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
+export function GoalCard({ goal, onEdit, onDelete, onAddCash }: GoalCardProps) {
   const { formatCurrency } = useCurrency();
   
   // Calculate progress percentage
@@ -88,6 +89,17 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
       </CardContent>
       
       <CardFooter className="flex justify-end bg-gray-50 px-6 py-3 border-t">
+        {!goal.isCompleted && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-[#27AE60] mr-2"
+            onClick={onAddCash}
+          >
+            <PlusCircle className="h-4 w-4 mr-1" />
+            Add Cash
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="sm"
