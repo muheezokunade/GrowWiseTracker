@@ -21,11 +21,11 @@ export function AdminRoute({
     );
   }
 
-  // Check if user is authenticated and has admin privileges
+  // If not authenticated or not an admin, redirect
   if (!user || !user.isAdmin) {
     return (
       <Route path={path}>
-        <Redirect to="/dashboard" />
+        <Redirect to={user ? "/dashboard" : "/auth"} />
       </Route>
     );
   }

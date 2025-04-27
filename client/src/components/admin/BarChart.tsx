@@ -1,60 +1,73 @@
-import { ResponsiveContainer, BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import React from "react";
+import {
+  Bar,
+  BarChart as RechartBarChart,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Legend,
+} from "recharts";
 
-const dummyData = [
-  { name: 'Jan', value: 1200 },
-  { name: 'Feb', value: 1900 },
-  { name: 'Mar', value: 1500 },
-  { name: 'Apr', value: 2400 },
-  { name: 'May', value: 2100 },
-  { name: 'Jun', value: 3000 },
-  { name: 'Jul', value: 2500 }
-];
-
-const goalTypeData = [
-  { name: 'Marketing', value: 35 },
-  { name: 'Hiring', value: 25 },
-  { name: 'Product Development', value: 18 },
-  { name: 'Expansion', value: 15 },
-  { name: 'Equipment', value: 7 }
+const demoData = [
+  { name: "Jan", users: 40, revenue: 2400 },
+  { name: "Feb", users: 30, revenue: 1398 },
+  { name: "Mar", users: 50, revenue: 9800 },
+  { name: "Apr", users: 80, revenue: 3908 },
+  { name: "May", users: 65, revenue: 4800 },
+  { name: "Jun", users: 90, revenue: 3800 },
+  { name: "Jul", users: 100, revenue: 4300 },
 ];
 
 interface BarChartProps {
-  data?: Array<{ name: string; value: number }>;
-  horizontal?: boolean; 
+  data?: any[];
+  horizontal?: boolean;
 }
 
-export function BarChart({ data, horizontal = false }: BarChartProps) {
-  const chartData = data || (horizontal ? goalTypeData : dummyData);
+export function BarChart({ data = demoData, horizontal = false }: BarChartProps) {
+  if (horizontal) {
+    return (
+      <ResponsiveContainer width="100%" height={350}>
+        <RechartBarChart
+          data={data}
+          layout="vertical"
+          margin={{ top: 20, right: 30, left: 30, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" horizontal={!horizontal} vertical={horizontal} />
+          <XAxis type="number" />
+          <YAxis dataKey="name" type="category" />
+          <Tooltip
+            formatter={(value: number) => [`${value}`, ""]}
+            labelFormatter={(value) => `${value}`}
+          />
+          <Legend />
+          <Bar dataKey="value" name="Value" fill="#8884d8" radius={[0, 4, 4, 0]} />
+        </RechartBarChart>
+      </ResponsiveContainer>
+    );
+  }
   
   return (
     <ResponsiveContainer width="100%" height={350}>
-      <RechartsBarChart
-        data={chartData}
-        layout={horizontal ? 'vertical' : 'horizontal'}
-        margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+      <RechartBarChart
+        data={data}
+        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
       >
-        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-        {horizontal ? (
-          <>
-            <XAxis type="number" />
-            <YAxis type="category" dataKey="name" width={150} />
-          </>
-        ) : (
-          <>
-            <XAxis dataKey="name" />
-            <YAxis />
-          </>
-        )}
-        <Tooltip 
-          contentStyle={{ backgroundColor: 'white', borderRadius: '8px', borderColor: '#e2e8f0' }}
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip
+          formatter={(value: number, name: string) => [
+            `${name === "revenue" ? "$" : ""}${value}`,
+            name === "revenue" ? "Revenue" : "Users",
+          ]}
+          labelFormatter={(value) => `Month: ${value}`}
         />
-        <Bar 
-          dataKey="value" 
-          fill="#3b82f6" 
-          radius={[4, 4, 0, 0]} 
-          barSize={horizontal ? 20 : 30}
-        />
-      </RechartsBarChart>
+        <Legend />
+        <Bar dataKey="users" name="Users" fill="#8884d8" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="revenue" name="Revenue" fill="#82ca9d" radius={[4, 4, 0, 0]} />
+      </RechartBarChart>
     </ResponsiveContainer>
   );
 }

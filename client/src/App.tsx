@@ -14,6 +14,14 @@ import ReportsPage from "@/pages/reports-page";
 import SettingsPage from "@/pages/settings-page";
 import HelpPage from "@/pages/help-page";
 import OnboardingPage from "@/pages/onboarding-page";
+
+// Admin pages
+import AdminDashboard from "@/pages/admin/admin-dashboard";
+import AdminUsers from "@/pages/admin/admin-users";
+import AdminSupport from "@/pages/admin/admin-support";
+import AdminNotifications from "@/pages/admin/admin-notifications";
+import AdminPlans from "@/pages/admin/admin-plans";
+
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
@@ -34,13 +42,19 @@ function AppRoutes() {
       if (user && location === "/onboarding" && !location.includes("step")) {
         setLocation("/onboarding/step/1");
       }
+
+      // If admin user tries to access normal dashboard, let them (they have dual role)
+      // But if non-admin tries to access admin pages, they'll be redirected by AdminRoute
     }
   }, [user, isLoading, location, setLocation]);
 
   return (
     <Switch>
+      {/* Public routes */}
       <Route path="/" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
+      
+      {/* Protected user routes */}
       <ProtectedRoute path="/dashboard" component={DashboardPage} />
       <ProtectedRoute path="/transactions" component={TransactionsPage} />
       <ProtectedRoute path="/profit-split" component={ProfitSplitPage} />
@@ -49,6 +63,15 @@ function AppRoutes() {
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/help" component={HelpPage} />
       <ProtectedRoute path="/onboarding/step/:step" component={OnboardingPage} />
+      
+      {/* Admin routes */}
+      <AdminRoute path="/admin" component={AdminDashboard} />
+      <AdminRoute path="/admin/users" component={AdminUsers} />
+      <AdminRoute path="/admin/support-tickets" component={AdminSupport} />
+      <AdminRoute path="/admin/notifications" component={AdminNotifications} />
+      <AdminRoute path="/admin/plans" component={AdminPlans} />
+      
+      {/* Catch-all route */}
       <Route component={NotFound} />
     </Switch>
   );
