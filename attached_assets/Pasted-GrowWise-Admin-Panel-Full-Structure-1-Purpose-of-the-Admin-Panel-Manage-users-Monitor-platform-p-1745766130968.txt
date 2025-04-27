@@ -1,0 +1,160 @@
+GrowWise Admin Panel – Full Structure
+1. Purpose of the Admin Panel
+Manage users
+
+Monitor platform performance
+
+Handle customer support
+
+Manage pricing plans and billing
+
+Push announcements and alerts
+
+Monitor financial data usage (NOT access bank details, just usage patterns)
+
+2. Core Features & Screens for Admin Panel
+
+Screen	Key Features
+Dashboard	KPIs overview: total users, active users, churn rate, MRR, ARR, monthly profit splits processed
+User Management	View users, search, filter (active, trial, paid), suspend accounts, upgrade/downgrade plans
+Transactions Monitor	See transaction sync errors, success rates, bank connection health
+Growth Goal Insights	Aggregate what goals users are setting (marketing, hiring, expansion trends)
+Plan & Billing Management	Edit pricing plans, manage discounts, view Stripe/Supabase billing logs
+Notifications Manager	Send app-wide announcements (e.g., feature releases, planned maintenance)
+Support Tickets	View user support requests, respond, escalate if needed
+App Settings	Platform-wide settings (terms links, FAQ links, notification templates)
+Analytics Reports	Monthly report generation (active users, growth in saved goals, total revenue tracked)
+3. Features of Each Admin Screen
+🏠 Dashboard (Admin Home)
+Quick stats:
+
+of active users this month
+Average monthly profit managed
+
+Retention/churn %
+
+Revenue summary
+
+Graphs: User growth curve, MRR/ARR trends
+
+👥 User Management
+Full user list
+
+Name
+
+Email
+
+Business type
+
+Signup date
+
+Plan (free, starter, growth)
+
+Filters:
+
+Trial users
+
+Paying users
+
+Churned users
+
+Actions:
+
+View user profile
+
+Reset password
+
+Suspend/Delete account
+
+Force password reset if needed
+
+💵 Transaction Monitor
+View system health for:
+
+Bank connections
+
+Transaction imports
+
+API usage stats
+
+Alerts if sync failures > X%
+
+🎯 Growth Goal Insights
+See what types of growth goals are most popular (helpful for marketing!)
+
+Track completion rates of growth goals
+
+Detect trends (e.g., "Most users in March focused on new product launches.")
+
+💳 Plan & Billing Management
+Integrate with Stripe dashboard API
+
+Manage subscription plans:
+
+Price changes
+
+Add new tiers
+
+Promo codes
+
+View failed payments, retry history
+
+Auto-email billing failure warnings
+
+📣 Notifications Manager
+Push platform-wide announcements
+
+Targeted messaging (e.g., users on free plan, users hitting 90% of their goal)
+
+Schedule notifications (later release)
+
+🛠️ App Settings
+Terms of service page link
+
+Privacy policy link
+
+Legal contact
+
+FAQ page editor (optional)
+
+Notification template editor
+
+📊 Analytics & Reports
+Export system-wide reports:
+
+Total transactions managed
+
+Average profit split % per business
+
+Revenue tracked through GrowWise
+
+Download monthly/quarterly reports (CSV, PDF)
+
+4. Admin Panel Tech Stack Suggestion
+
+Layer	Recommendation
+Framework	React (Admin Template like Material UI Dashboard)
+Backend	Node.js/Express or Supabase (preferred for fast setup)
+Auth	Secure Admin Login (email/password, 2FA recommended)
+Database	PostgreSQL (shared with main app backend)
+API	RESTful or GraphQL
+Hosting	Vercel / AWS Amplify / Render
+🔒 Security Measures
+Admin Panel protected under /admin route
+
+Strict Role-Based Access Control (RBAC) (only admin users can access)
+
+Encrypted database access (especially for user personal data)
+
+Logging for all admin actions (for accountability)
+
+📋 Quick Wireframe Layout of Admin Panel
+less
+Copy
+Edit
+Sidebar Menu: 
+[Dashboard] [Users] [Transactions] [Goals] [Billing] [Notifications] [Support] [Settings] [Analytics]
+
+Main Panel Area:
+- Dynamic based on sidebar selection.
+- Tables, Graphs, Forms, Buttons based on view.
