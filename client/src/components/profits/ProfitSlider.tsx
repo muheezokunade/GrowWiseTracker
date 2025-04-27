@@ -1,5 +1,5 @@
 import { Slider } from "@/components/ui/slider";
-import { formatCurrency } from "@/lib/utils";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface ProfitSliderProps {
   label: string;
@@ -16,6 +16,8 @@ export function ProfitSlider({
   description,
   amount = 0,
 }: ProfitSliderProps) {
+  const { formatCurrency } = useCurrency();
+  
   const handleSliderChange = (values: number[]) => {
     onChange(values[0]);
   };

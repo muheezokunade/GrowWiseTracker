@@ -5,7 +5,7 @@ import { ProfitSplitChart } from "@/components/profits/ProfitSplitChart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/use-currency";
@@ -19,6 +19,7 @@ interface ProfitSplitFormState {
 
 export default function ProfitSplitPage() {
   const { toast } = useToast();
+  const { formatCurrency } = useCurrency();
   const [isModified, setIsModified] = useState(false);
   const [profitSplit, setProfitSplit] = useState<ProfitSplitFormState>({
     ownerPay: 40,
@@ -30,17 +31,19 @@ export default function ProfitSplitPage() {
   // Fetch profit split and dashboard data
   const { data: profitSplitData, isLoading: isLoadingProfitSplit } = useQuery({
     queryKey: ["/api/profit-split"],
-    onSuccess: (data) => {
-      if (data) {
-        setProfitSplit({
-          ownerPay: data.ownerPay,
-          reinvestment: data.reinvestment,
-          savings: data.savings,
-          taxReserve: data.taxReserve,
-        });
-      }
-    },
   });
+  
+  // Update profit split state when data changes
+  useEffect(() => {
+    if (profitSplitData) {
+      setProfitSplit({
+        ownerPay: profitSplitData.ownerPay,
+        reinvestment: profitSplitData.reinvestment,
+        savings: profitSplitData.savings,
+        taxReserve: profitSplitData.taxReserve,
+      });
+    }
+  }, [profitSplitData]);
 
   const { data: dashboardData, isLoading: isLoadingDashboard } = useQuery({
     queryKey: ["/api/dashboard/summary"],

@@ -1,5 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
-import { formatCurrency } from "@/lib/utils";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface ProfitDataItem {
   name: string;
