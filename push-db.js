@@ -1,44 +1,50 @@
-const { execSync } = require('child_process');
-const { Pool } = require('@neondatabase/serverless');
-const { drizzle } = require('drizzle-orm/neon-serverless');
-const { migrate } = require('drizzle-orm/neon-serverless/migrator');
-const ws = require('ws');
-const fs = require('fs');
-const path = require('path');
+import { execSync } from 'child_process';
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import path from 'path';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
 
-// Get the schema file content
-const schemaPath = path.join(__dirname, 'shared', 'schema.ts');
-const schemaContent = fs.readFileSync(schemaPath, 'utf8');
+// Load environment variables
+dotenv.config();
 
-// Create SQL for each table
-const tableRegex = /export const (\w+) = pgTable\("([^"]+)".*?\);/gs;
-let match;
-let sqlStatements = [];
-
-while ((match = tableRegex.exec(schemaContent))) {
-  const tableName = match[2];
-  sqlStatements.push(`
-  CREATE TABLE IF NOT EXISTS "${tableName}" (
-    id SERIAL PRIMARY KEY,
-    -- Add other columns based on schema
-    created_at TIMESTAMP DEFAULT NOW()
-  );
-  `);
-}
-
-// Execute SQL statements
+// Execute Drizzle migration
 async function createTables() {
   if (!process.env.DATABASE_URL) {
     console.error('DATABASE_URL is not set');
     return;
   }
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  console.log('Creating database connection...');
+  
+  const pool = new Pool({ 
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false
+    }
+  });
+  
+  const db = drizzle(pool);
   
   try {
-    for (const sql of sqlStatements) {
-      await pool.query(sql);
-    }
+    console.log('Creating schema...');
+    
+    // We'll use the drizzle-kit push command instead of writing custom SQL
+    // This will automatically create tables based on our schema
+    execSync('npx drizzle-kit push:pg --schema=./shared/schema.ts');
+    
+    console.log('Creating session table...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "session" (
+        "sid" varchar NOT NULL COLLATE "default",
+        "sess" json NOT NULL,
+        "expire" timestamp(6) NOT NULL,
+        CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+      );
+      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+    `);
+    
     console.log('Tables created successfully');
   } catch (error) {
     console.error('Error creating tables:', error);
