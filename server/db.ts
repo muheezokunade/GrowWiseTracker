@@ -21,7 +21,13 @@ if (process.env.DATABASE_URL) {
       // Add shorter timeout to fail faster when DB is not available
       connectionTimeoutMillis: 5000,
       // Reduce idle timeout to handle connection issues faster
-      idleTimeoutMillis: 30000
+      idleTimeoutMillis: 30000,
+      // Add query timeout
+      query_timeout: 5000,
+      // Add statement timeout
+      statement_timeout: 5000,
+      // Maximum number of clients the pool should contain
+      max: 20
     });
 
     // Test the connection
@@ -29,10 +35,31 @@ if (process.env.DATABASE_URL) {
       console.error('Unexpected error on idle client', err);
     });
 
+    // Add connection event handlers
+    pool.on('connect', (client) => {
+      console.log('New client connected to PostgreSQL');
+    });
+
+    pool.on('remove', (client) => {
+      console.log('Client disconnected from PostgreSQL pool');
+    });
+
     // Initialize Drizzle ORM
     db = drizzle(pool, { schema });
 
     console.log('PostgreSQL database connection initialized');
+    
+    // Add async connection test that won't block startup
+    setTimeout(async () => {
+      try {
+        const client = await pool?.connect();
+        await client.query('SELECT 1');
+        console.log('Database connection confirmed working');
+        client.release();
+      } catch (err) {
+        console.warn('Database connection test failed, fallback to memory storage may be used:', err);
+      }
+    }, 1000);
   } catch (error) {
     console.error('Failed to initialize database connection:', error);
     pool = null;
