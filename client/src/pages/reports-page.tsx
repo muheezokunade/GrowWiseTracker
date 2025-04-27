@@ -165,8 +165,11 @@ export default function ReportsPage() {
                   <Button
                     className="bg-[#27AE60] hover:bg-[#219653] w-full sm:w-auto"
                     onClick={() => generateReport(REPORT_TYPES.PL)}
-                    disabled={isLoading}
+                    disabled={isLoading || generateReportMutation.isPending}
                   >
+                    {generateReportMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : null}
                     Generate P&L Report
                   </Button>
                 </div>
@@ -195,8 +198,11 @@ export default function ReportsPage() {
                   <Button
                     className="bg-[#27AE60] hover:bg-[#219653] w-full sm:w-auto"
                     onClick={() => generateReport(REPORT_TYPES.CASH_FLOW)}
-                    disabled={isLoading}
+                    disabled={isLoading || generateReportMutation.isPending}
                   >
+                    {generateReportMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : null}
                     Generate Cash Flow Report
                   </Button>
                 </div>
@@ -225,8 +231,11 @@ export default function ReportsPage() {
                   <Button
                     className="bg-[#27AE60] hover:bg-[#219653] w-full sm:w-auto"
                     onClick={() => generateReport(REPORT_TYPES.GROWTH)}
-                    disabled={isLoading}
+                    disabled={isLoading || generateReportMutation.isPending}
                   >
+                    {generateReportMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : null}
                     Generate Growth Analysis
                   </Button>
                 </div>

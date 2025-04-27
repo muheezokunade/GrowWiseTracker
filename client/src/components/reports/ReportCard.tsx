@@ -118,15 +118,24 @@ export function ReportCard({ report }: ReportCardProps) {
           size="sm"
           className="mr-2"
           onClick={handleEmail}
+          disabled={isEmailing}
         >
+          {isEmailing ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : null}
           Email
         </Button>
         <Button
           size="sm"
           className="bg-[#27AE60] hover:bg-[#219653]"
           onClick={handleDownload}
+          disabled={isDownloading}
         >
-          <ArrowDown className="h-4 w-4 mr-1" />
+          {isDownloading ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <ArrowDown className="h-4 w-4 mr-1" />
+          )}
           Download
         </Button>
       </CardFooter>
