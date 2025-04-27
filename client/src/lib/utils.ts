@@ -5,10 +5,27 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
+// Currency formatting based on user's preferred currency
+export function formatCurrency(amount: number, currencyCode = "USD"): string {
+  // Map of currency codes to locale formats that work well with them
+  const currencyLocaleMap: Record<string, string> = {
+    USD: "en-US",
+    EUR: "de-DE",
+    GBP: "en-GB",
+    JPY: "ja-JP",
+    CAD: "en-CA",
+    AUD: "en-AU",
+    CNY: "zh-CN",
+    INR: "en-IN",
+    NGN: "en-NG",
+  };
+
+  // Get appropriate locale for the currency, fallback to en-US
+  const locale = currencyLocaleMap[currencyCode] || "en-US";
+  
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "USD",
+    currency: currencyCode,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);

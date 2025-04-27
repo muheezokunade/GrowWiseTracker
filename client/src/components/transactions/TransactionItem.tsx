@@ -1,6 +1,7 @@
 import { CreditCard, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Transaction } from "@shared/schema";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -10,11 +11,9 @@ interface TransactionItemProps {
 
 export function TransactionItem({ transaction, onEdit, onDelete }: TransactionItemProps) {
   const isIncome = transaction.type === "income";
+  const { formatCurrency } = useCurrency();
   
-  const formattedAmount = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(transaction.amount);
+  const formattedAmount = formatCurrency(transaction.amount);
   
   const formattedDate = new Date(transaction.date).toLocaleDateString('en-US', {
     month: 'short',

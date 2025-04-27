@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface KpiCardProps {
   title: string;
@@ -16,8 +17,10 @@ export function KpiCard({
   comparisonText = "vs last month",
   isProfitCard = false,
 }: KpiCardProps) {
+  const { formatCurrency } = useCurrency();
+  
   const formattedValue = typeof value === 'number' 
-    ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+    ? formatCurrency(value)
     : value;
   
   const isPositiveChange = percentageChange && percentageChange > 0;
