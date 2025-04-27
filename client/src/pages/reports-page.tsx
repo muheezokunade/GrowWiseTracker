@@ -3,9 +3,11 @@ import { MainLayout } from "@/components/layouts/MainLayout";
 import { ReportCard } from "@/components/reports/ReportCard";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Loader2, Calendar, FileBarChart, FilePieChart } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Report types
 const REPORT_TYPES = {
@@ -14,7 +16,15 @@ const REPORT_TYPES = {
   GROWTH: "Growth Analysis",
 };
 
+// Map report types to icons
+const reportIcons = {
+  [REPORT_TYPES.PL]: FileBarChart,
+  [REPORT_TYPES.CASH_FLOW]: FilePieChart,
+  [REPORT_TYPES.GROWTH]: Calendar,
+};
+
 export default function ReportsPage() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("monthly");
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().slice(0, 7)
@@ -26,9 +36,51 @@ export default function ReportsPage() {
     new Date().getFullYear().toString()
   );
 
-  // Fetch transactions for reports
-  const { data: transactions, isLoading } = useQuery({
+  // Define report type interface
+  interface Report {
+    id: number;
+    name: string;
+    type: string;
+    period: string;
+    createdAt: string | Date;
+    url?: string;
+  }
+
+  // Fetch recent reports
+  const { 
+    data: recentReports = [] as Report[], 
+    isLoading: isLoadingReports 
+  } = useQuery<Report[]>({
+    queryKey: ["/api/reports"],
+  });
+
+  // Fetch transactions for reference (might be needed for report generation)
+  const { isLoading: isLoadingTransactions } = useQuery({
     queryKey: ["/api/transactions"],
+  });
+
+  const isLoading = isLoadingReports || isLoadingTransactions;
+
+  // Generate report mutation
+  const generateReportMutation = useMutation({
+    mutationFn: async ({ reportType, period }: { reportType: string, period: string }) => {
+      const res = await apiRequest('POST', '/api/reports', { reportType, period });
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reports"] });
+      toast({
+        title: "Report Generated",
+        description: `Your ${data.type} report for ${data.period} has been created successfully.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to Generate Report",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   });
 
   // Generate reports
@@ -36,7 +88,10 @@ export default function ReportsPage() {
     let period;
     switch (activeTab) {
       case "monthly":
-        period = selectedMonth;
+        // Format: "2023-04" -> "April 2023"
+        const [year, month] = selectedMonth.split('-');
+        const monthName = new Date(`${year}-${month}-01`).toLocaleString('default', { month: 'long' });
+        period = `${monthName} ${year}`;
         break;
       case "quarterly":
         period = selectedQuarter;
@@ -48,9 +103,7 @@ export default function ReportsPage() {
         period = selectedMonth;
     }
 
-    // This is just mock functionality for the UI
-    // In a real implementation, you would call an API to generate the report
-    alert(`Generating ${reportType} report for ${period}`);
+    generateReportMutation.mutate({ reportType, period });
   };
 
   // Get years for dropdown (last 3 years)
@@ -71,33 +124,11 @@ export default function ReportsPage() {
     ];
   };
 
-  // Mock reports data (in a real app, this would come from the backend)
-  const recentReports = [
-    {
-      id: 1,
-      name: "March 2023 Profit & Loss",
-      type: REPORT_TYPES.PL,
-      period: "March 2023",
-      createdAt: new Date("2023-04-02"),
-      icon: FileBarChart,
-    },
-    {
-      id: 2,
-      name: "Q1 2023 Cash Flow",
-      type: REPORT_TYPES.CASH_FLOW,
-      period: "Q1 2023",
-      createdAt: new Date("2023-04-10"),
-      icon: FilePieChart,
-    },
-    {
-      id: 3,
-      name: "2022 Annual Growth Analysis",
-      type: REPORT_TYPES.GROWTH,
-      period: "2022",
-      createdAt: new Date("2023-01-15"),
-      icon: Calendar,
-    },
-  ];
+  // Add icons to reports data
+  const reportsWithIcons = recentReports.map((report: Report) => ({
+    ...report,
+    icon: reportIcons[report.type as keyof typeof reportIcons] || FileBarChart
+  }));
 
   return (
     <MainLayout title="Financial Reports">
@@ -213,7 +244,7 @@ export default function ReportsPage() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-6">
-            {recentReports.map((report) => (
+            {recentReports.map((report: Report) => (
               <ReportCard key={report.id} report={report} />
             ))}
 

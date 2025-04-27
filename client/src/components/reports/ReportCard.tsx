@@ -1,7 +1,11 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowDown, Calendar, FileBarChart, FilePieChart } from "lucide-react";
+import { ArrowDown, Calendar, FileBarChart, FilePieChart, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface ReportCardProps {
   report: {
@@ -9,20 +13,81 @@ interface ReportCardProps {
     name: string;
     type: string;
     period: string;
-    createdAt: Date;
-    icon: any;
+    createdAt: Date | string;
+    icon?: any;
+    url?: string;
   };
 }
 
 export function ReportCard({ report }: ReportCardProps) {
+  const { toast } = useToast();
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isEmailing, setIsEmailing] = useState(false);
+
+  // Download report mutation
+  const downloadMutation = useMutation({
+    mutationFn: async (reportId: number) => {
+      setIsDownloading(true);
+      try {
+        const res = await apiRequest('GET', `/api/reports/${reportId}/download`);
+        const data = await res.json();
+        
+        // In a real app, this would trigger a file download
+        // For now, we'll just show a success message
+        if (data.success) {
+          toast({
+            title: "Download Started",
+            description: `${report.name} is being downloaded.`,
+          });
+        }
+      } finally {
+        setIsDownloading(false);
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Download Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsDownloading(false);
+    }
+  });
+
+  // Email report mutation
+  const emailMutation = useMutation({
+    mutationFn: async (reportId: number) => {
+      setIsEmailing(true);
+      try {
+        const res = await apiRequest('POST', `/api/reports/${reportId}/email`);
+        const data = await res.json();
+        
+        if (data.success) {
+          toast({
+            title: "Email Sent",
+            description: `${report.name} has been sent to your email.`,
+          });
+        }
+      } finally {
+        setIsEmailing(false);
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Email Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsEmailing(false);
+    }
+  });
+
   const handleDownload = () => {
-    // In a real app, this would download the report
-    alert(`Downloading ${report.name}`);
+    downloadMutation.mutate(report.id);
   };
 
   const handleEmail = () => {
-    // In a real app, this would email the report
-    alert(`Emailing ${report.name}`);
+    emailMutation.mutate(report.id);
   };
 
   // Determine icon component

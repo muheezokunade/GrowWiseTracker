@@ -425,6 +425,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== REPORTS API ENDPOINTS =====
+  
+  // Get recent reports
+  app.get("/api/reports", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      // Here we're returning mock data, but in a real app you would fetch from database
+      const recentReports = [
+        {
+          id: 1,
+          name: "March 2023 Profit & Loss",
+          type: "Profit & Loss",
+          period: "March 2023",
+          createdAt: new Date("2023-04-02"),
+          url: "/reports/pl-march-2023.pdf"
+        },
+        {
+          id: 2,
+          name: "Q1 2023 Cash Flow",
+          type: "Cash Flow",
+          period: "Q1 2023",
+          createdAt: new Date("2023-04-10"),
+          url: "/reports/cashflow-q1-2023.pdf"
+        },
+        {
+          id: 3,
+          name: "2022 Annual Growth Analysis",
+          type: "Growth Analysis",
+          period: "2022",
+          createdAt: new Date("2023-01-15"),
+          url: "/reports/growth-2022.pdf"
+        },
+      ];
+      
+      res.json(recentReports);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch reports" });
+    }
+  });
+  
+  // Generate a new report
+  app.post("/api/reports", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { reportType, period } = req.body;
+      
+      if (!reportType || !period) {
+        return res.status(400).json({ message: "Report type and period are required" });
+      }
+      
+      // In a real app, this would generate an actual report based on transaction data
+      // For now, we'll just return a mock report object
+      const newReport = {
+        id: Math.floor(Math.random() * 1000),
+        name: `${period} ${reportType}`,
+        type: reportType,
+        period: period,
+        createdAt: new Date(),
+        url: `/reports/${reportType.toLowerCase().replace(/\s+/g, '-')}-${period.toLowerCase().replace(/\s+/g, '-')}.pdf`
+      };
+      
+      res.status(201).json(newReport);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate report" });
+    }
+  });
+  
+  // Download a report
+  app.get("/api/reports/:id/download", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const reportId = parseInt(req.params.id);
+      
+      // In a real app, you would look up the report from the database
+      // and return the actual file for download
+      
+      // For now, just return a success response
+      res.json({ success: true, message: "Report download initiated", reportId });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to download report" });
+    }
+  });
+  
+  // Email a report
+  app.post("/api/reports/:id/email", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const reportId = parseInt(req.params.id);
+      
+      // In a real app, you would look up the report from the database
+      // and send an email with the report attached
+      
+      // For now, just return a success response
+      res.json({ success: true, message: "Report sent to email", reportId });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to email report" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
