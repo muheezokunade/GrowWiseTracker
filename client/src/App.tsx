@@ -1,6 +1,4 @@
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
@@ -15,11 +13,11 @@ import ReportsPage from "@/pages/reports-page";
 import SettingsPage from "@/pages/settings-page";
 import HelpPage from "@/pages/help-page";
 import OnboardingPage from "@/pages/onboarding-page";
-import { useAuth } from "./hooks/use-auth";
+import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 
-function Router() {
+function AppRoutes() {
   const { user, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
 
@@ -59,7 +57,9 @@ function App() {
   return (
     <TooltipProvider>
       <Toaster />
-      <Router />
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </TooltipProvider>
   );
 }
