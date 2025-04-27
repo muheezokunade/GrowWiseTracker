@@ -1,10 +1,14 @@
-const { execSync } = require('child_process');
-const { Pool } = require('@neondatabase/serverless');
-const { drizzle } = require('drizzle-orm/neon-serverless');
-const { migrate } = require('drizzle-orm/neon-serverless/migrator');
-const ws = require('ws');
-const fs = require('fs');
-const path = require('path');
+import { execSync } from 'child_process';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import ws from 'ws';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+neonConfig.webSocketConstructor = ws;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Get the schema file content
 const schemaPath = path.join(__dirname, 'shared', 'schema.ts');
