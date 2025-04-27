@@ -12,6 +12,7 @@ interface ProfitSplitChartProps {
 }
 
 export function ProfitSplitChart({ data }: ProfitSplitChartProps) {
+  const { formatCurrency } = useCurrency();
   // Colors for the different profit split categories
   const COLORS = ["#27AE60", "#2D9CDB", "#6FCF97", "#F2994A"];
 

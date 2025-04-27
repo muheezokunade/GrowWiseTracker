@@ -1,7 +1,8 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { formatCurrency, formatDate, calculateDaysUntil, calculateProgressPercentage } from "@/lib/utils";
+import { formatDate, calculateDaysUntil, calculateProgressPercentage } from "@/lib/utils";
+import { useCurrency } from "@/hooks/use-currency";
 import { CalendarClock, Edit, Trash2 } from "lucide-react";
 import { GrowthGoal } from "@shared/schema";
 
@@ -12,6 +13,8 @@ interface GoalCardProps {
 }
 
 export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
+  const { formatCurrency } = useCurrency();
+  
   // Calculate progress percentage
   const progressPercentage = calculateProgressPercentage(goal.currentAmount, goal.targetAmount);
   
