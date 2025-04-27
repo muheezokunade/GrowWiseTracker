@@ -51,11 +51,15 @@ export class MemoryStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const user: User = {
-      ...insertUser,
       id: generateId(),
+      username: insertUser.username,
+      password: insertUser.password,
+      businessName: insertUser.businessName || null,
+      industry: insertUser.industry || null,
+      monthlyRevenue: insertUser.monthlyRevenue || null,
+      isAdmin: insertUser.isAdmin || false,
       createdAt: new Date(),
       lastLoginAt: new Date(),
-      isAdmin: false,
       status: 'active',
       currency: insertUser.currency || 'USD'
     };
@@ -86,8 +90,12 @@ export class MemoryStorage implements IStorage {
 
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
     const transaction: Transaction = {
-      ...insertTransaction,
       id: generateId(),
+      userId: insertTransaction.userId,
+      type: insertTransaction.type,
+      amount: insertTransaction.amount,
+      description: insertTransaction.description,
+      category: insertTransaction.category || null,
       date: insertTransaction.date || new Date()
     };
     this.transactions.push(transaction);

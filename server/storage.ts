@@ -209,25 +209,37 @@ export class DatabaseStorage implements IStorage {
 
   // Profit split operations
   async getProfitSplit(userId: number): Promise<ProfitSplit | undefined> {
-    const [profitSplit] = await db.select()
-      .from(profitSplits)
-      .where(eq(profitSplits.userId, userId));
-    return profitSplit;
+    try {
+      const [profitSplit] = await db.select()
+        .from(profitSplits)
+        .where(eq(profitSplits.userId, userId));
+      return profitSplit;
+    } catch (error) {
+      handleDatabaseError(error, `get profit split for user ${userId}`);
+    }
   }
 
   async createProfitSplit(insertProfitSplit: InsertProfitSplit): Promise<ProfitSplit> {
-    const [profitSplit] = await db.insert(profitSplits)
-      .values(insertProfitSplit)
-      .returning();
-    return profitSplit;
+    try {
+      const [profitSplit] = await db.insert(profitSplits)
+        .values(insertProfitSplit)
+        .returning();
+      return profitSplit;
+    } catch (error) {
+      handleDatabaseError(error, `create profit split`);
+    }
   }
 
   async updateProfitSplit(id: number, data: Partial<ProfitSplit>): Promise<ProfitSplit | undefined> {
-    const [profitSplit] = await db.update(profitSplits)
-      .set(data)
-      .where(eq(profitSplits.id, id))
-      .returning();
-    return profitSplit;
+    try {
+      const [profitSplit] = await db.update(profitSplits)
+        .set(data)
+        .where(eq(profitSplits.id, id))
+        .returning();
+      return profitSplit;
+    } catch (error) {
+      handleDatabaseError(error, `update profit split with id ${id}`);
+    }
   }
 
   // Growth goal operations
@@ -386,5 +398,17 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Use the database storage implementation
-export const storage = new DatabaseStorage();
+// Create the storage implementation with database or fallback
+let storageImpl: IStorage;
+
+try {
+  storageImpl = new DatabaseStorage();
+} catch (error) {
+  console.warn('Failed to create database storage, falling back to memory storage:', error);
+  
+  // Import and use memory storage if database connection fails
+  const { MemoryStorage } = require('./memory-storage');
+  storageImpl = new MemoryStorage();
+}
+
+export const storage = storageImpl;
