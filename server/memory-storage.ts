@@ -57,7 +57,7 @@ export class MemoryStorage implements IStorage {
       businessName: insertUser.businessName || null,
       industry: insertUser.industry || null,
       monthlyRevenue: insertUser.monthlyRevenue || null,
-      isAdmin: insertUser.isAdmin || false,
+      isAdmin: 'isAdmin' in insertUser ? (insertUser as any).isAdmin : false,
       createdAt: new Date(),
       lastLoginAt: new Date(),
       status: 'active',
@@ -125,8 +125,12 @@ export class MemoryStorage implements IStorage {
 
   async createProfitSplit(insertProfitSplit: InsertProfitSplit): Promise<ProfitSplit> {
     const profitSplit: ProfitSplit = {
-      ...insertProfitSplit,
-      id: generateId()
+      id: generateId(),
+      userId: insertProfitSplit.userId,
+      ownerPay: insertProfitSplit.ownerPay ?? 0,
+      reinvestment: insertProfitSplit.reinvestment ?? 0,
+      savings: insertProfitSplit.savings ?? 0,
+      taxReserve: insertProfitSplit.taxReserve ?? 0
     };
     this.profitSplits.push(profitSplit);
     return profitSplit;
@@ -188,8 +192,12 @@ export class MemoryStorage implements IStorage {
 
   async createOnboarding(insertOnboarding: InsertOnboarding): Promise<Onboarding> {
     const onboarding: Onboarding = {
-      ...insertOnboarding,
-      id: generateId()
+      id: generateId(),
+      userId: insertOnboarding.userId,
+      step: insertOnboarding.step ?? 1,
+      completed: insertOnboarding.completed ?? false,
+      financialGoals: insertOnboarding.financialGoals ?? null,
+      bankConnected: insertOnboarding.bankConnected ?? false
     };
     this.onboardingData.push(onboarding);
     return onboarding;
@@ -218,11 +226,16 @@ export class MemoryStorage implements IStorage {
 
   async createSupportTicket(insertTicket: InsertSupportTicket): Promise<SupportTicket> {
     const ticket: SupportTicket = {
-      ...insertTicket,
       id: generateId(),
+      userId: insertTicket.userId,
+      subject: insertTicket.subject,
+      message: insertTicket.message,
+      status: insertTicket.status || 'open',
+      priority: insertTicket.priority || 'medium',
       createdAt: new Date(),
-      updatedAt: new Date(),
-      status: insertTicket.status || 'open'
+      updatedAt: null,
+      assignedToId: insertTicket.assignedToId || null,
+      resolution: insertTicket.resolution || null
     };
     this.supportTickets.push(ticket);
     return ticket;
@@ -247,10 +260,15 @@ export class MemoryStorage implements IStorage {
 
   async createNotification(insertNotification: InsertNotification): Promise<Notification> {
     const notification: Notification = {
-      ...insertNotification,
       id: generateId(),
-      createdAt: new Date(),
-      isRead: false
+      title: insertNotification.title,
+      message: insertNotification.message,
+      type: insertNotification.type || "announcement",
+      targetUserIds: insertNotification.targetUserIds || null,
+      sentAt: new Date(),
+      expiresAt: insertNotification.expiresAt || null,
+      isActive: insertNotification.isActive ?? true,
+      createdById: insertNotification.createdById
     };
     this.notifications.push(notification);
     return notification;
@@ -283,9 +301,15 @@ export class MemoryStorage implements IStorage {
 
   async createPlan(insertPlan: InsertPlan): Promise<Plan> {
     const plan: Plan = {
-      ...insertPlan,
       id: generateId(),
-      createdAt: new Date()
+      name: insertPlan.name,
+      description: insertPlan.description,
+      price: insertPlan.price,
+      features: insertPlan.features,
+      billingCycle: insertPlan.billingCycle || "monthly",
+      isActive: insertPlan.isActive ?? true,
+      createdAt: new Date(),
+      updatedAt: null
     };
     this.plans.push(plan);
     return plan;
