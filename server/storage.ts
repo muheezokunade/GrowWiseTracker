@@ -91,31 +91,29 @@ export class DatabaseStorage implements IStorage {
       
       // Only use PostgreSQL session store if pool is available
       if (pool) {
-        this.sessionStore = new PostgresSessionStore({ 
-          pool: pool as any, // Type assertion to avoid TypeScript errors
-          createTableIfMissing: true,
-          tableName: 'session' // Explicit table name
-        });
-        console.log('Using PostgreSQL session store');
+        try {
+          this.sessionStore = new PostgresSessionStore({ 
+            pool: pool as any, // Type assertion to avoid TypeScript errors
+            createTableIfMissing: true,
+            tableName: 'session', // Explicit table name
+            errorHandler: (error: any) => {
+              console.warn('PostgreSQL session store error:', error);
+            }
+          });
+          console.log('Using PostgreSQL session store');
+        } catch (sessionError) {
+          throw new Error(`Failed to create PostgreSQL session store: ${sessionError.message}`);
+        }
       } else {
         throw new Error('Database pool is not available');
       }
-      
-      // Perform a simple test query to verify the database is accessible
-      // Make this non-blocking and don't throw errors to ensure app can still start
-      db.execute(sql`SELECT 1 AS value`).then(() => {
-        console.log('Successfully connected to the database');
-      }).catch((err: Error) => {
-        console.warn('Database connection test warning:', err);
-        console.log('Application will continue with reduced functionality');
-      });
     } catch (error) {
       // Fall back to memory store if PostgreSQL connection fails
-      console.warn('Failed to create PostgreSQL session store, falling back to memory store:', error);
+      console.warn('Failed to use PostgreSQL, falling back to memory store:', error);
       this.sessionStore = new MemoryStore({
         checkPeriod: 86400000 // prune expired entries every 24h
       });
-      console.log('Using memory session store');
+      console.log('Using in-memory session and data storage');
     }
   }
 
@@ -876,16 +874,49 @@ class HybridStorage implements IStorage {
   }
 }
 
-// Create a storage instance based on database availability
-let storage: IStorage;
+// Import the database connection status checker
+import { isDatabaseConnected } from './db';
 
-try {
-  storage = new DatabaseStorage();
-  console.log('Using database storage implementation');
-} catch (error) {
-  console.warn('Failed to initialize database storage, falling back to memory storage:', error);
-  storage = new MemoryStorage();
-  console.log('Using memory storage implementation');
-}
+// Create storage systems
+const dbStorage = new DatabaseStorage();
+const memStorage = new MemoryStorage();
 
-export { storage };
+// Dynamic proxy to switch between database and memory storage based on connection status
+const storageProxy = new Proxy({} as IStorage, {
+  get: function(target, prop, receiver) {
+    // Always use the session store from database storage for consistency
+    if (prop === 'sessionStore') {
+      return dbStorage.sessionStore;
+    }
+    
+    // For all other operations, check database connection status
+    const storage = isDatabaseConnected() ? dbStorage : memStorage;
+    
+    // Get the requested property/method
+    const value = Reflect.get(storage, prop, receiver);
+    
+    // If it's a method, bind it to the correct storage instance
+    if (typeof value === 'function') {
+      return function(...args: any[]) {
+        try {
+          return value.apply(storage, args);
+        } catch (error) {
+          console.error(`Error in storage method ${String(prop)}:`, error);
+          // If database operation fails, fall back to memory storage for this operation
+          if (storage === dbStorage) {
+            console.log(`Falling back to memory storage for operation: ${String(prop)}`);
+            const memMethod = Reflect.get(memStorage, prop);
+            if (typeof memMethod === 'function') {
+              return memMethod.apply(memStorage, args);
+            }
+          }
+          throw error;
+        }
+      };
+    }
+    
+    return value;
+  }
+});
+
+export const storage = storageProxy;
