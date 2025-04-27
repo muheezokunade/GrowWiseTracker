@@ -8,6 +8,7 @@ interface KpiCardProps {
   percentageChange?: number;
   comparisonText?: string;
   isProfitCard?: boolean;
+  icon?: React.ReactNode;
 }
 
 export function KpiCard({
@@ -16,6 +17,7 @@ export function KpiCard({
   percentageChange,
   comparisonText = "vs last month",
   isProfitCard = false,
+  icon,
 }: KpiCardProps) {
   const { formatCurrency } = useCurrency();
   
@@ -27,27 +29,35 @@ export function KpiCard({
   const isNegativeChange = percentageChange && percentageChange < 0;
   
   return (
-    <div className="bg-white p-4 rounded-xl shadow-sm">
-      <p className="text-sm text-gray-600">{title}</p>
-      <p className={cn(
-        "text-2xl font-semibold mt-1",
-        isProfitCard ? "text-[#27AE60]" : ""
-      )}>
-        {formattedValue}
-      </p>
-      {percentageChange !== undefined && (
-        <div className="flex items-center mt-1 text-xs">
-          <span className={cn(
-            "flex items-center",
-            isPositiveChange ? "text-green-600" : isNegativeChange ? "text-red-600" : "text-gray-600"
-          )}>
-            {isPositiveChange && <ArrowUp className="h-3 w-3 mr-1" />}
-            {isNegativeChange && <ArrowDown className="h-3 w-3 mr-1" />}
-            {Math.abs(percentageChange).toFixed(1)}%
-          </span>
-          <span className="text-gray-400 ml-1">{comparisonText}</span>
-        </div>
-      )}
+    <div className="stat-card card-hover">
+      <div className="absolute right-2 top-2 opacity-10">
+        {icon}
+      </div>
+      <div className="flex flex-col">
+        <p className="stat-card-label">{title}</p>
+        <p className={cn(
+          "stat-card-value",
+          isProfitCard ? "text-primary" : ""
+        )}>
+          {formattedValue}
+        </p>
+        
+        {percentageChange !== undefined && (
+          <div className="flex items-center mt-2">
+            <span className={cn(
+              "flex items-center text-sm font-medium",
+              isPositiveChange ? "stat-card-trend-up" : 
+              isNegativeChange ? "stat-card-trend-down" : 
+              "text-muted-foreground"
+            )}>
+              {isPositiveChange && <ArrowUp className="h-3 w-3 mr-1" />}
+              {isNegativeChange && <ArrowDown className="h-3 w-3 mr-1" />}
+              {Math.abs(percentageChange).toFixed(1)}%
+            </span>
+            <span className="text-muted-foreground text-xs ml-2">{comparisonText}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

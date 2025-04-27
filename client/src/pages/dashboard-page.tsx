@@ -6,7 +6,7 @@ import { SmartSuggestionCard } from "@/components/dashboard/SmartSuggestionCard"
 import { TransactionItem } from "@/components/transactions/TransactionItem";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { Loader2, PlusCircle, TrendingUp, BadgeDollarSign } from "lucide-react";
+import { Loader2, PlusCircle, TrendingUp, BadgeDollarSign, BarChart, ArrowDownCircle, PiggyBank, PieChart, AlertCircle } from "lucide-react";
 import { Transaction } from "@shared/schema";
 
 // Smart suggestions
@@ -49,8 +49,9 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <MainLayout title="Dashboard">
-        <div className="flex items-center justify-center min-h-[300px]">
-          <Loader2 className="h-8 w-8 animate-spin text-[#27AE60]" />
+        <div className="flex flex-col items-center justify-center min-h-[300px]">
+          <Loader2 className="loading-spinner" />
+          <p className="text-muted-foreground mt-4 text-sm animate-pulse-soft">Loading your financial dashboard...</p>
         </div>
       </MainLayout>
     );
@@ -59,8 +60,14 @@ export default function DashboardPage() {
   if (error) {
     return (
       <MainLayout title="Dashboard">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          Error loading dashboard data. Please try again.
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6 text-destructive flex items-center space-x-2">
+          <div className="h-10 w-10 rounded-full bg-destructive/20 flex items-center justify-center">
+            <AlertCircle className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="font-medium">Unable to load dashboard data</h3>
+            <p className="text-sm">Please refresh the page or try again later.</p>
+          </div>
         </div>
       </MainLayout>
     );
@@ -79,7 +86,7 @@ export default function DashboardPage() {
     <MainLayout title="Dashboard">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-end mb-4">
-          <select className="bg-white border border-gray-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#27AE60] focus:border-[#27AE60]">
+          <select className="bg-card border border-input text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
             <option>This Month</option>
             <option>Last Month</option>
             <option>Last 3 Months</option>
@@ -94,6 +101,7 @@ export default function DashboardPage() {
             value={summary.revenue}
             percentageChange={8.2}
             comparisonText="vs last month"
+            icon={<BarChart className="h-10 w-10" />}
           />
           
           <KpiCard
@@ -101,6 +109,7 @@ export default function DashboardPage() {
             value={summary.expenses}
             percentageChange={-3.4}
             comparisonText="vs last month"
+            icon={<ArrowDownCircle className="h-10 w-10" />}
           />
           
           <KpiCard
@@ -109,6 +118,7 @@ export default function DashboardPage() {
             percentageChange={14.3}
             comparisonText="vs last month"
             isProfitCard={true}
+            icon={<PiggyBank className="h-10 w-10" />}
           />
         </div>
         
@@ -122,27 +132,27 @@ export default function DashboardPage() {
         <h2 className="font-heading font-semibold text-lg mb-3">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
           <Link href="/transactions?action=add">
-            <Button variant="outline" className="h-auto w-full py-4 flex flex-col items-center space-y-2 bg-white hover:bg-gray-50">
-              <div className="h-10 w-10 bg-[#27AE60]/20 rounded-full flex items-center justify-center">
-                <PlusCircle className="h-5 w-5 text-[#27AE60]" />
+            <Button variant="outline" className="card-hover h-auto w-full py-4 flex flex-col items-center space-y-2">
+              <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+                <PlusCircle className="h-5 w-5 text-primary" />
               </div>
               <span className="text-sm font-medium">Add Expense</span>
             </Button>
           </Link>
           
           <Link href="/growth-goals?action=create">
-            <Button variant="outline" className="h-auto w-full py-4 flex flex-col items-center space-y-2 bg-white hover:bg-gray-50">
-              <div className="h-10 w-10 bg-[#27AE60]/20 rounded-full flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-[#27AE60]" />
+            <Button variant="outline" className="card-hover h-auto w-full py-4 flex flex-col items-center space-y-2">
+              <div className="h-10 w-10 bg-accent/10 rounded-full flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-accent" />
               </div>
               <span className="text-sm font-medium">Create Goal</span>
             </Button>
           </Link>
           
           <Link href="/profit-split">
-            <Button variant="outline" className="h-auto w-full py-4 flex flex-col items-center space-y-2 bg-white hover:bg-gray-50">
-              <div className="h-10 w-10 bg-[#27AE60]/20 rounded-full flex items-center justify-center">
-                <BadgeDollarSign className="h-5 w-5 text-[#27AE60]" />
+            <Button variant="outline" className="card-hover h-auto w-full py-4 flex flex-col items-center space-y-2">
+              <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+                <BadgeDollarSign className="h-5 w-5 text-primary" />
               </div>
               <span className="text-sm font-medium">Split Profit</span>
             </Button>
@@ -156,13 +166,13 @@ export default function DashboardPage() {
         <div className="flex justify-between items-center mb-3">
           <h2 className="font-heading font-semibold text-lg">Recent Transactions</h2>
           <Link href="/transactions">
-            <a className="text-sm font-medium text-[#27AE60] hover:text-[#219653]">
+            <span className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
               View all
-            </a>
+            </span>
           </Link>
         </div>
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="divide-y divide-gray-200">
+        <div className="bg-card rounded-xl border shadow-card overflow-hidden card-hover">
+          <div className="divide-y divide-border">
             {recentTransactions.length > 0 ? (
               recentTransactions.map((transaction) => (
                 <TransactionItem key={transaction.id} transaction={transaction} />

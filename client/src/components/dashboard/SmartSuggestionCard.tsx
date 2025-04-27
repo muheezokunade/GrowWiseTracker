@@ -1,4 +1,5 @@
-import { Check, Clock } from "lucide-react";
+import { Check, Clock, LightbulbIcon, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SmartSuggestionProps {
   suggestions: Array<{ 
@@ -13,17 +14,23 @@ export function SmartSuggestionCard({ suggestions }: SmartSuggestionProps) {
   }
   
   return (
-    <div className="bg-[#27AE60]/10 border border-[#27AE60]/30 p-4 rounded-xl mb-6">
-      <h2 className="font-heading font-semibold text-[#219653] mb-2">Smart Suggestions</h2>
-      <ul className="space-y-3">
+    <div className="bg-primary/5 border border-primary/20 p-6 rounded-xl mb-6 shadow-card animate-slide-up">
+      <div className="flex items-center mb-3">
+        <LightbulbIcon className="h-5 w-5 text-primary mr-2" />
+        <h2 className="font-heading font-semibold text-primary">Smart Suggestions</h2>
+      </div>
+      <ul className="space-y-4">
         {suggestions.map((suggestion, index) => (
-          <li key={index} className="flex items-start">
+          <li key={index} className={cn(
+            "flex items-start p-3 rounded-lg",
+            suggestion.type === "tip" ? "bg-secondary/50" : "bg-accent/10"
+          )}>
             {suggestion.type === "tip" ? (
-              <Check className="h-5 w-5 text-[#27AE60] mt-0.5 flex-shrink-0" />
+              <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
             ) : (
-              <Clock className="h-5 w-5 text-[#27AE60] mt-0.5 flex-shrink-0" />
+              <AlertTriangle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
             )}
-            <span className="ml-2 text-sm text-gray-900">{suggestion.text}</span>
+            <span className="ml-3 text-sm">{suggestion.text}</span>
           </li>
         ))}
       </ul>
