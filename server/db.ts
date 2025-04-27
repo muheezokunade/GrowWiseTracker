@@ -1,5 +1,5 @@
-import { Pool } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
+import pg from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
 if (!process.env.DATABASE_URL) {
@@ -8,5 +8,9 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Use standard pg instead of Neon's serverless version with WebSockets
+export const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
 export const db = drizzle(pool, { schema });
