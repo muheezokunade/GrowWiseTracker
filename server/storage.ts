@@ -330,5 +330,314 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Use the database storage implementation
-export const storage = new DatabaseStorage();
+// Memory Storage Implementation for development
+export class MemStorage implements IStorage {
+  sessionStore: session.Store;
+  private users: User[] = [];
+  private transactions: Transaction[] = [];
+  private profitSplits: ProfitSplit[] = [];
+  private growthGoals: GrowthGoal[] = [];
+  private onboardingData: Onboarding[] = [];
+  private supportTicketsData: SupportTicket[] = [];
+  private notificationsData: Notification[] = [];
+  private plansData: Plan[] = [];
+  private idCounter = { 
+    user: 1,
+    transaction: 1,
+    profitSplit: 1,
+    growthGoal: 1,
+    onboarding: 1,
+    supportTicket: 1,
+    notification: 1,
+    plan: 1
+  };
+
+  constructor() {
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    });
+    
+    // Add demo admin user
+    this.users.push({
+      id: this.idCounter.user++,
+      username: "admin",
+      password: "$2b$10$9ZKZB9SLG9EnKKbxuVzl6.LnH1aFXLXS1SUhC/8tNgPFEk7.WviC2", // password: admin
+      businessName: "GrowWise Admin",
+      industry: "Technology",
+      monthlyRevenue: "$100,000+",
+      isAdmin: true,
+      createdAt: new Date(),
+      lastLoginAt: null,
+      status: "active",
+      currency: "USD"
+    });
+    
+    // Add demo regular user
+    this.users.push({
+      id: this.idCounter.user++,
+      username: "demo",
+      password: "$2b$10$9ZKZB9SLG9EnKKbxuVzl6.LnH1aFXLXS1SUhC/8tNgPFEk7.WviC2", // password: admin
+      businessName: "Demo Business",
+      industry: "Retail",
+      monthlyRevenue: "$10,000-$50,000",
+      isAdmin: false,
+      createdAt: new Date(),
+      lastLoginAt: null,
+      status: "active",
+      currency: "USD"
+    });
+  }
+
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.find(user => user.id === id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return this.users.find(user => user.username === username);
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const user: User = {
+      id: this.idCounter.user++,
+      ...insertUser,
+      createdAt: new Date(),
+      lastLoginAt: null,
+      status: "active",
+      isAdmin: false,
+      currency: insertUser.currency || "USD"
+    };
+    this.users.push(user);
+    return user;
+  }
+
+  async updateUser(id: number, data: Partial<User>): Promise<User | undefined> {
+    const index = this.users.findIndex(user => user.id === id);
+    if (index === -1) return undefined;
+    this.users[index] = { ...this.users[index], ...data };
+    return this.users[index];
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return [...this.users];
+  }
+
+  // Transaction operations
+  async getTransactions(userId: number): Promise<Transaction[]> {
+    return this.transactions.filter(transaction => transaction.userId === userId);
+  }
+
+  async getTransactionById(id: number): Promise<Transaction | undefined> {
+    return this.transactions.find(transaction => transaction.id === id);
+  }
+
+  async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
+    const transaction: Transaction = {
+      id: this.idCounter.transaction++,
+      ...insertTransaction,
+    };
+    this.transactions.push(transaction);
+    return transaction;
+  }
+
+  async updateTransaction(id: number, data: Partial<Transaction>): Promise<Transaction | undefined> {
+    const index = this.transactions.findIndex(transaction => transaction.id === id);
+    if (index === -1) return undefined;
+    this.transactions[index] = { ...this.transactions[index], ...data };
+    return this.transactions[index];
+  }
+
+  async deleteTransaction(id: number): Promise<boolean> {
+    const index = this.transactions.findIndex(transaction => transaction.id === id);
+    if (index === -1) return false;
+    this.transactions.splice(index, 1);
+    return true;
+  }
+
+  // Profit split operations
+  async getProfitSplit(userId: number): Promise<ProfitSplit | undefined> {
+    return this.profitSplits.find(profitSplit => profitSplit.userId === userId);
+  }
+
+  async createProfitSplit(insertProfitSplit: InsertProfitSplit): Promise<ProfitSplit> {
+    const profitSplit: ProfitSplit = {
+      id: this.idCounter.profitSplit++,
+      ...insertProfitSplit,
+    };
+    this.profitSplits.push(profitSplit);
+    return profitSplit;
+  }
+
+  async updateProfitSplit(id: number, data: Partial<ProfitSplit>): Promise<ProfitSplit | undefined> {
+    const index = this.profitSplits.findIndex(profitSplit => profitSplit.id === id);
+    if (index === -1) return undefined;
+    this.profitSplits[index] = { ...this.profitSplits[index], ...data };
+    return this.profitSplits[index];
+  }
+
+  // Growth goal operations
+  async getGrowthGoals(userId: number): Promise<GrowthGoal[]> {
+    return this.growthGoals.filter(goal => goal.userId === userId);
+  }
+
+  async getGrowthGoalById(id: number): Promise<GrowthGoal | undefined> {
+    return this.growthGoals.find(goal => goal.id === id);
+  }
+
+  async createGrowthGoal(insertGrowthGoal: InsertGrowthGoal): Promise<GrowthGoal> {
+    const goal: GrowthGoal = {
+      id: this.idCounter.growthGoal++,
+      ...insertGrowthGoal,
+      createdAt: new Date(),
+    };
+    this.growthGoals.push(goal);
+    return goal;
+  }
+
+  async updateGrowthGoal(id: number, data: Partial<GrowthGoal>): Promise<GrowthGoal | undefined> {
+    const index = this.growthGoals.findIndex(goal => goal.id === id);
+    if (index === -1) return undefined;
+    this.growthGoals[index] = { ...this.growthGoals[index], ...data };
+    return this.growthGoals[index];
+  }
+
+  async deleteGrowthGoal(id: number): Promise<boolean> {
+    const index = this.growthGoals.findIndex(goal => goal.id === id);
+    if (index === -1) return false;
+    this.growthGoals.splice(index, 1);
+    return true;
+  }
+
+  async getAllGrowthGoals(): Promise<GrowthGoal[]> {
+    return [...this.growthGoals];
+  }
+
+  // Onboarding operations
+  async getOnboarding(userId: number): Promise<Onboarding | undefined> {
+    return this.onboardingData.find(data => data.userId === userId);
+  }
+
+  async createOnboarding(insertOnboarding: InsertOnboarding): Promise<Onboarding> {
+    const onboardingData: Onboarding = {
+      id: this.idCounter.onboarding++,
+      ...insertOnboarding,
+    };
+    this.onboardingData.push(onboardingData);
+    return onboardingData;
+  }
+
+  async updateOnboarding(userId: number, data: Partial<Onboarding>): Promise<Onboarding | undefined> {
+    const index = this.onboardingData.findIndex(onb => onb.userId === userId);
+    if (index === -1) return undefined;
+    this.onboardingData[index] = { ...this.onboardingData[index], ...data };
+    return this.onboardingData[index];
+  }
+
+  // Support ticket operations
+  async getSupportTickets(): Promise<SupportTicket[]> {
+    return [...this.supportTicketsData];
+  }
+
+  async getSupportTicketsByUser(userId: number): Promise<SupportTicket[]> {
+    return this.supportTicketsData.filter(ticket => ticket.userId === userId);
+  }
+
+  async getSupportTicketById(id: number): Promise<SupportTicket | undefined> {
+    return this.supportTicketsData.find(ticket => ticket.id === id);
+  }
+
+  async createSupportTicket(insertTicket: InsertSupportTicket): Promise<SupportTicket> {
+    const ticket: SupportTicket = {
+      id: this.idCounter.supportTicket++,
+      ...insertTicket,
+      createdAt: new Date(),
+      updatedAt: null,
+      status: "open",
+      priority: "medium",
+      assignedToId: null,
+      resolution: null,
+    };
+    this.supportTicketsData.push(ticket);
+    return ticket;
+  }
+
+  async updateSupportTicket(id: number, data: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
+    const index = this.supportTicketsData.findIndex(ticket => ticket.id === id);
+    if (index === -1) return undefined;
+    this.supportTicketsData[index] = { 
+      ...this.supportTicketsData[index], 
+      ...data,
+      updatedAt: new Date()
+    };
+    return this.supportTicketsData[index];
+  }
+
+  // Notification operations
+  async getNotifications(): Promise<Notification[]> {
+    return [...this.notificationsData];
+  }
+
+  async getNotificationById(id: number): Promise<Notification | undefined> {
+    return this.notificationsData.find(notification => notification.id === id);
+  }
+
+  async createNotification(insertNotification: InsertNotification): Promise<Notification> {
+    const notification: Notification = {
+      id: this.idCounter.notification++,
+      ...insertNotification,
+      sentAt: new Date(),
+      isActive: true,
+    };
+    this.notificationsData.push(notification);
+    return notification;
+  }
+
+  async updateNotification(id: number, data: Partial<Notification>): Promise<Notification | undefined> {
+    const index = this.notificationsData.findIndex(notification => notification.id === id);
+    if (index === -1) return undefined;
+    this.notificationsData[index] = { ...this.notificationsData[index], ...data };
+    return this.notificationsData[index];
+  }
+
+  async deleteNotification(id: number): Promise<boolean> {
+    const index = this.notificationsData.findIndex(notification => notification.id === id);
+    if (index === -1) return false;
+    this.notificationsData.splice(index, 1);
+    return true;
+  }
+
+  // Plan operations
+  async getPlans(): Promise<Plan[]> {
+    return [...this.plansData];
+  }
+
+  async getPlanById(id: number): Promise<Plan | undefined> {
+    return this.plansData.find(plan => plan.id === id);
+  }
+
+  async createPlan(insertPlan: InsertPlan): Promise<Plan> {
+    const plan: Plan = {
+      id: this.idCounter.plan++,
+      ...insertPlan,
+      createdAt: new Date(),
+      updatedAt: null,
+      isActive: true,
+    };
+    this.plansData.push(plan);
+    return plan;
+  }
+
+  async updatePlan(id: number, data: Partial<Plan>): Promise<Plan | undefined> {
+    const index = this.plansData.findIndex(plan => plan.id === id);
+    if (index === -1) return undefined;
+    this.plansData[index] = { 
+      ...this.plansData[index], 
+      ...data,
+      updatedAt: new Date()
+    };
+    return this.plansData[index];
+  }
+}
+
+// Use the memory storage implementation for development
+export const storage = new MemStorage();
