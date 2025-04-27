@@ -14,6 +14,7 @@ import { eq } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import createMemoryStore from "memorystore";
+import { handleDatabaseError } from "./error-handler";
 
 const PostgresSessionStore = connectPg(session);
 const MemoryStore = createMemoryStore(session);
@@ -99,71 +100,111 @@ export class DatabaseStorage implements IStorage {
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user;
+    } catch (error) {
+      handleDatabaseError(error, `get user with id ${id}`);
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.username, username));
+      return user;
+    } catch (error) {
+      handleDatabaseError(error, `get user with username ${username}`);
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    // Make sure all required fields are present with defaults if needed
-    const userToInsert = {
-      ...insertUser,
-      currency: insertUser.currency || "USD",
-    };
+    try {
+      // Make sure all required fields are present with defaults if needed
+      const userToInsert = {
+        ...insertUser,
+        currency: insertUser.currency || "USD",
+      };
 
-    const [user] = await db.insert(users).values(userToInsert).returning();
-    return user;
+      const [user] = await db.insert(users).values(userToInsert).returning();
+      return user;
+    } catch (error) {
+      handleDatabaseError(error, `create user`);
+    }
   }
 
   async updateUser(id: number, data: Partial<User>): Promise<User | undefined> {
-    const [user] = await db.update(users)
-      .set(data)
-      .where(eq(users.id, id))
-      .returning();
-    return user;
+    try {
+      const [user] = await db.update(users)
+        .set(data)
+        .where(eq(users.id, id))
+        .returning();
+      return user;
+    } catch (error) {
+      handleDatabaseError(error, `update user with id ${id}`);
+    }
   }
 
   async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users);
+    try {
+      return await db.select().from(users);
+    } catch (error) {
+      handleDatabaseError(error, `get all users`);
+    }
   }
 
   // Transaction operations
   async getTransactions(userId: number): Promise<Transaction[]> {
-    return await db.select()
-      .from(transactions)
-      .where(eq(transactions.userId, userId));
+    try {
+      return await db.select()
+        .from(transactions)
+        .where(eq(transactions.userId, userId));
+    } catch (error) {
+      handleDatabaseError(error, `get transactions for user ${userId}`);
+    }
   }
 
   async getTransactionById(id: number): Promise<Transaction | undefined> {
-    const [transaction] = await db.select()
-      .from(transactions)
-      .where(eq(transactions.id, id));
-    return transaction;
+    try {
+      const [transaction] = await db.select()
+        .from(transactions)
+        .where(eq(transactions.id, id));
+      return transaction;
+    } catch (error) {
+      handleDatabaseError(error, `get transaction with id ${id}`);
+    }
   }
 
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
-    const [transaction] = await db.insert(transactions)
-      .values(insertTransaction)
-      .returning();
-    return transaction;
+    try {
+      const [transaction] = await db.insert(transactions)
+        .values(insertTransaction)
+        .returning();
+      return transaction;
+    } catch (error) {
+      handleDatabaseError(error, `create transaction`);
+    }
   }
 
   async updateTransaction(id: number, data: Partial<Transaction>): Promise<Transaction | undefined> {
-    const [transaction] = await db.update(transactions)
-      .set(data)
-      .where(eq(transactions.id, id))
-      .returning();
-    return transaction;
+    try {
+      const [transaction] = await db.update(transactions)
+        .set(data)
+        .where(eq(transactions.id, id))
+        .returning();
+      return transaction;
+    } catch (error) {
+      handleDatabaseError(error, `update transaction with id ${id}`);
+    }
   }
 
   async deleteTransaction(id: number): Promise<boolean> {
-    const result = await db.delete(transactions)
-      .where(eq(transactions.id, id));
-    return true; // In Drizzle, delete doesn't return a count but we assume success
+    try {
+      await db.delete(transactions)
+        .where(eq(transactions.id, id));
+      return true; // In Drizzle, delete doesn't return a count but we assume success
+    } catch (error) {
+      handleDatabaseError(error, `delete transaction with id ${id}`);
+    }
   }
 
   // Profit split operations

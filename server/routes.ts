@@ -12,6 +12,7 @@ import {
 } from "@shared/schema";
 import { registerAdminRoutes } from "./admin-routes";
 import { registerUserAdminRoutes } from "./user-admin-routes";
+import { apiErrorHandler } from "./error-handler";
 
 // Helper function to generate cash reserve chart data based on transactions
 function generateCashReserveData(transactions: Transaction[]) {
@@ -120,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const transactions = await storage.getTransactions(req.user.id);
       res.json(transactions);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch transactions" });
+      apiErrorHandler(error, res);
     }
   });
 
