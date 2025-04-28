@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Lock, User, DollarSign, Building, LineChart, Loader2 } from "lucide-react";
+import { Mail, Lock, User, DollarSign, Building, LineChart, Loader2, LogIn, UserPlus } from "lucide-react";
 
 const loginSchema = z.object({
   username: z.string().email("Please enter a valid email address"),
@@ -115,24 +115,30 @@ export default function AuthPage() {
           {/* Toggle between Login/Signup */}
           <div className="flex border-b border-gray-200 mb-8">
             <button
-              className={`px-4 py-2 font-medium ${
+              className={`px-4 py-2 font-medium transition-all duration-200 ${
                 isLoginForm
                   ? "text-green-600 border-b-2 border-green-600"
                   : "text-gray-400 hover:text-gray-600"
               }`}
               onClick={() => setIsLoginForm(true)}
             >
-              Log in
+              <div className="flex items-center gap-2">
+                <LogIn size={18} />
+                <span>Log in</span>
+              </div>
             </button>
             <button
-              className={`px-4 py-2 font-medium ${
+              className={`px-4 py-2 font-medium transition-all duration-200 ${
                 !isLoginForm
                   ? "text-green-600 border-b-2 border-green-600"
                   : "text-gray-400 hover:text-gray-600"
               }`}
               onClick={() => setIsLoginForm(false)}
             >
-              Sign up
+              <div className="flex items-center gap-2">
+                <UserPlus size={18} />
+                <span>Sign up</span>
+              </div>
             </button>
           </div>
 
@@ -310,9 +316,12 @@ export default function AuthPage() {
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select your preferred currency" />
-                          </SelectTrigger>
+                          <div className="relative">
+                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" />
+                            <SelectTrigger className="pl-10">
+                              <SelectValue placeholder="Select your preferred currency" />
+                            </SelectTrigger>
+                          </div>
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="USD">US Dollar (USD)</SelectItem>
