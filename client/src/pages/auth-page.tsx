@@ -24,6 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Mail, Lock, User, DollarSign, Building, LineChart, Loader2 } from "lucide-react";
 
 const loginSchema = z.object({
   username: z.string().email("Please enter a valid email address"),
@@ -94,15 +96,28 @@ export default function AuthPage() {
   };
 
   return (
-    <MainLayout>
-      <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-lg mt-8">
-        <div className="p-8">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 bg-white rounded-2xl shadow-xl overflow-hidden">
+        {/* Left Column - Form */}
+        <div className="p-8 md:p-12">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {isLoginForm ? "Welcome back" : "Get started today"}
+            </h1>
+            <p className="text-gray-600">
+              {isLoginForm 
+                ? "Sign in to your GrowWise account"
+                : "Create your account and start managing your finances"
+              }
+            </p>
+          </div>
+          
           {/* Toggle between Login/Signup */}
-          <div className="flex border-b border-gray-200 mb-6">
+          <div className="flex border-b border-gray-200 mb-8">
             <button
               className={`px-4 py-2 font-medium ${
                 isLoginForm
-                  ? "text-[#27AE60] border-b-2 border-[#27AE60]"
+                  ? "text-green-600 border-b-2 border-green-600"
                   : "text-gray-400 hover:text-gray-600"
               }`}
               onClick={() => setIsLoginForm(true)}
@@ -112,7 +127,7 @@ export default function AuthPage() {
             <button
               className={`px-4 py-2 font-medium ${
                 !isLoginForm
-                  ? "text-[#27AE60] border-b-2 border-[#27AE60]"
+                  ? "text-green-600 border-b-2 border-green-600"
                   : "text-gray-400 hover:text-gray-600"
               }`}
               onClick={() => setIsLoginForm(false)}
@@ -330,7 +345,76 @@ export default function AuthPage() {
             </Form>
           )}
         </div>
+        
+        {/* Right Column - Hero Section */}
+        <div className="hidden md:block relative bg-gradient-to-br from-green-500 to-green-700 text-white">
+          <div className="absolute inset-0 bg-black opacity-10 z-10"></div>
+          <div className="relative z-20 flex flex-col justify-center h-full p-12">
+            <div className="mb-8">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                fill="currentColor" 
+                className="w-12 h-12 mb-4 text-white opacity-90"
+              >
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" />
+              </svg>
+              <h2 className="text-3xl font-bold mb-2">GrowWise</h2>
+              <p className="text-xl opacity-90">Financial Growth for Small Businesses</p>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="flex items-start space-x-3">
+                <div className="mt-1 bg-white bg-opacity-20 rounded-full p-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-medium">Track Income & Expenses</h3>
+                  <p className="opacity-80 text-sm">Stay on top of your finances with real-time tracking</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="mt-1 bg-white bg-opacity-20 rounded-full p-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-medium">Set Growth Goals</h3>
+                  <p className="opacity-80 text-sm">Define and track your business growth objectives</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="mt-1 bg-white bg-opacity-20 rounded-full p-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-medium">Monitor Cash Flow</h3>
+                  <p className="opacity-80 text-sm">Visual insights into your business's financial health</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="mt-1 bg-white bg-opacity-20 rounded-full p-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-medium">Strategic Profit Planning</h3>
+                  <p className="opacity-80 text-sm">Allocate profits to key business areas automatically</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </MainLayout>
+    </div>
   );
 }
