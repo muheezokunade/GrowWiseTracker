@@ -147,12 +147,16 @@ export default function AuthPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="your@email.com" 
-                          {...field} 
-                          type="email"
-                          autoComplete="email"
-                        />
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                          <Input 
+                            placeholder="your@email.com" 
+                            {...field} 
+                            type="email"
+                            autoComplete="email"
+                            className="pl-10"
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -166,12 +170,16 @@ export default function AuthPage() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="••••••••" 
-                          type="password" 
-                          {...field}
-                          autoComplete="current-password" 
-                        />
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                          <Input 
+                            placeholder="••••••••" 
+                            type="password" 
+                            {...field}
+                            autoComplete="current-password"
+                            className="pl-10"
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -196,19 +204,24 @@ export default function AuthPage() {
                       </FormItem>
                     )}
                   />
-                  <Link href="#forgot-password">
-                    <a className="text-sm font-medium text-[#27AE60] hover:text-[#219653]">
-                      Forgot password?
-                    </a>
+                  <Link href="#forgot-password" className="text-sm font-medium text-green-600 hover:text-green-700">
+                    Forgot password?
                   </Link>
                 </div>
 
                 <Button
                   type="submit"
-                  className="w-full bg-[#27AE60] hover:bg-[#219653]"
+                  className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-2 px-4 rounded-md transition-all duration-200 flex items-center justify-center gap-2"
                   disabled={loginMutation.isPending}
                 >
-                  {loginMutation.isPending ? "Logging in..." : "Log in"}
+                  {loginMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Logging in...</span>
+                    </>
+                  ) : (
+                    "Log in"
+                  )}
                 </Button>
               </form>
             </Form>
@@ -225,11 +238,15 @@ export default function AuthPage() {
                     <FormItem>
                       <FormLabel>Full Name</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="John Smith" 
-                          {...field} 
-                          autoComplete="name"
-                        />
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                          <Input 
+                            placeholder="John Smith" 
+                            {...field} 
+                            autoComplete="name"
+                            className="pl-10"
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -243,12 +260,16 @@ export default function AuthPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="your@email.com" 
-                          {...field} 
-                          type="email"
-                          autoComplete="email"
-                        />
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                          <Input 
+                            placeholder="your@email.com" 
+                            {...field} 
+                            type="email"
+                            autoComplete="email"
+                            className="pl-10"
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -262,12 +283,16 @@ export default function AuthPage() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="••••••••" 
-                          type="password" 
-                          {...field}
-                          autoComplete="new-password" 
-                        />
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                          <Input 
+                            placeholder="••••••••" 
+                            type="password" 
+                            {...field}
+                            autoComplete="new-password"
+                            className="pl-10"
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -320,13 +345,13 @@ export default function AuthPage() {
                       <div className="space-y-1 leading-none">
                         <FormLabel className="text-sm font-normal">
                           I agree to the{" "}
-                          <a href="#" className="text-[#27AE60] font-medium">
+                          <Link href="#terms" className="text-green-600 font-medium hover:text-green-700">
                             Terms of Service
-                          </a>{" "}
+                          </Link>{" "}
                           and{" "}
-                          <a href="#" className="text-[#27AE60] font-medium">
+                          <Link href="#privacy" className="text-green-600 font-medium hover:text-green-700">
                             Privacy Policy
-                          </a>
+                          </Link>
                         </FormLabel>
                         <FormMessage />
                       </div>
@@ -336,10 +361,17 @@ export default function AuthPage() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-[#27AE60] hover:bg-[#219653]"
+                  className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-2 px-4 rounded-md transition-all duration-200 flex items-center justify-center gap-2"
                   disabled={registerMutation.isPending}
                 >
-                  {registerMutation.isPending ? "Creating account..." : "Create account"}
+                  {registerMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Creating account...</span>
+                    </>
+                  ) : (
+                    "Create account"
+                  )}
                 </Button>
               </form>
             </Form>
