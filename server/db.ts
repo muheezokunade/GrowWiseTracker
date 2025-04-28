@@ -10,7 +10,16 @@ if (!process.env.DATABASE_URL) {
 
 // Use standard pg instead of Neon's serverless version with WebSockets
 export const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
+  // Use individual connection parameters instead of connectionString
+  user: process.env.PGUSER,
+  host: process.env.PGHOST,
+  database: process.env.PGDATABASE,
+  password: process.env.PGPASSWORD,
+  port: parseInt(process.env.PGPORT || '5432'),
+  // Add SSL configuration for secure connections
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 // Test the database connection
@@ -19,7 +28,7 @@ pool.query('SELECT NOW()', (err, res) => {
     console.error('Database connection error:', err);
     // Don't crash the app, just log the error
   } else {
-    console.log('Database connection successful');
+    console.log('Database connection successful:', res.rows[0]);
   }
 });
 

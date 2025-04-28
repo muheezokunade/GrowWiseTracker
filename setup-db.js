@@ -1,11 +1,18 @@
-import pg from 'pg';
+// Use ESM syntax explicitly
+import pkg from 'pg';
+const { Pool } = pkg;
 
 async function setupTables() {
   try {
     console.log('Connecting to database with standard PostgreSQL driver...');
     
-    // Use PGUSER, PGHOST, PGPASSWORD, PGDATABASE, PGPORT instead of DATABASE_URL
-    const pool = new pg.Pool({
+    // Use individual connection parameters instead of connectionString
+    const pool = new Pool({
+      user: process.env.PGUSER,
+      host: process.env.PGHOST,
+      database: process.env.PGDATABASE,
+      password: process.env.PGPASSWORD,
+      port: parseInt(process.env.PGPORT || '5432'),
       ssl: {
         rejectUnauthorized: false
       }
