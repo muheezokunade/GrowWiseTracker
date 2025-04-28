@@ -13,4 +13,14 @@ export const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Test the database connection
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('Database connection error:', err);
+    // Don't crash the app, just log the error
+  } else {
+    console.log('Database connection successful');
+  }
+});
+
 export const db = drizzle(pool, { schema });

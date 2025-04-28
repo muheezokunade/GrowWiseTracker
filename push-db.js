@@ -1,5 +1,5 @@
-const pg = require('pg');
-const { drizzle } = require('drizzle-orm/node-postgres');
+import pg from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 
 async function pushTables() {
   if (!process.env.DATABASE_URL) {
