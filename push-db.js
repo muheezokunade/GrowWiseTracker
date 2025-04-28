@@ -1,54 +1,176 @@
-import { execSync } from 'child_process';
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from 'ws';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+const pg = require('pg');
+const { drizzle } = require('drizzle-orm/node-postgres');
 
-neonConfig.webSocketConstructor = ws;
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Get the schema file content
-const schemaPath = path.join(__dirname, 'shared', 'schema.ts');
-const schemaContent = fs.readFileSync(schemaPath, 'utf8');
-
-// Create SQL for each table
-const tableRegex = /export const (\w+) = pgTable\("([^"]+)".*?\);/gs;
-let match;
-let sqlStatements = [];
-
-while ((match = tableRegex.exec(schemaContent))) {
-  const tableName = match[2];
-  sqlStatements.push(`
-  CREATE TABLE IF NOT EXISTS "${tableName}" (
-    id SERIAL PRIMARY KEY,
-    -- Add other columns based on schema
-    created_at TIMESTAMP DEFAULT NOW()
-  );
-  `);
-}
-
-// Execute SQL statements
-async function createTables() {
+async function pushTables() {
   if (!process.env.DATABASE_URL) {
     console.error('DATABASE_URL is not set');
     return;
   }
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  
   try {
-    for (const sql of sqlStatements) {
-      await pool.query(sql);
-    }
-    console.log('Tables created successfully');
+    console.log('Connecting to database...');
+    const pool = new pg.Pool({
+      connectionString: process.env.DATABASE_URL,
+    });
+    
+    // We won't use drizzle for this, just direct queries
+    
+    console.log('Creating tables...');
+    // Session store table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "session" (
+        "sid" varchar NOT NULL COLLATE "default",
+        "sess" json NOT NULL,
+        "expire" timestamp(6) NOT NULL,
+        CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+      );
+    `);
+    
+    console.log('Creating users table...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "users" (
+        "id" SERIAL PRIMARY KEY,
+        "username" TEXT NOT NULL UNIQUE,
+        "password" TEXT NOT NULL,
+        "business_name" TEXT,
+        "industry" TEXT,
+        "monthly_revenue" TEXT,
+        "is_admin" BOOLEAN DEFAULT false,
+        "created_at" TIMESTAMP DEFAULT NOW(),
+        "last_login_at" TIMESTAMP,
+        "status" TEXT DEFAULT 'active',
+        "currency" TEXT DEFAULT 'USD' NOT NULL
+      );
+    `);
+    
+    console.log('Creating transactions table...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "transactions" (
+        "id" SERIAL PRIMARY KEY,
+        "user_id" INTEGER NOT NULL,
+        "description" TEXT NOT NULL,
+        "amount" REAL NOT NULL,
+        "type" TEXT NOT NULL,
+        "category" TEXT,
+        "date" TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+    
+    console.log('Creating profit_splits table...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "profit_splits" (
+        "id" SERIAL PRIMARY KEY,
+        "user_id" INTEGER NOT NULL,
+        "owner_pay" REAL NOT NULL DEFAULT 40,
+        "reinvestment" REAL NOT NULL DEFAULT 30,
+        "savings" REAL NOT NULL DEFAULT 20,
+        "tax_reserve" REAL NOT NULL DEFAULT 10
+      );
+    `);
+    
+    console.log('Creating growth_goals table...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "growth_goals" (
+        "id" SERIAL PRIMARY KEY,
+        "user_id" INTEGER NOT NULL,
+        "name" TEXT NOT NULL,
+        "target_amount" REAL NOT NULL,
+        "current_amount" REAL NOT NULL DEFAULT 0,
+        "target_date" TIMESTAMP,
+        "is_completed" BOOLEAN NOT NULL DEFAULT false,
+        "created_at" TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+    
+    console.log('Creating onboarding table...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "onboarding" (
+        "id" SERIAL PRIMARY KEY,
+        "user_id" INTEGER NOT NULL,
+        "step" INTEGER NOT NULL DEFAULT 1,
+        "completed" BOOLEAN NOT NULL DEFAULT false,
+        "financial_goals" TEXT,
+        "bank_connected" BOOLEAN NOT NULL DEFAULT false
+      );
+    `);
+    
+    console.log('Creating support_tickets table...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "support_tickets" (
+        "id" SERIAL PRIMARY KEY,
+        "user_id" INTEGER NOT NULL,
+        "subject" TEXT NOT NULL,
+        "message" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'open',
+        "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
+        "resolved_at" TIMESTAMP
+      );
+    `);
+    
+    console.log('Creating notifications table...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "notifications" (
+        "id" SERIAL PRIMARY KEY,
+        "message" TEXT NOT NULL,
+        "type" TEXT NOT NULL,
+        "title" TEXT NOT NULL,
+        "target_user_ids" TEXT,
+        "sent_at" TIMESTAMP NOT NULL DEFAULT NOW(),
+        "expires_at" TIMESTAMP,
+        "is_active" BOOLEAN NOT NULL DEFAULT true,
+        "created_by_id" INTEGER NOT NULL
+      );
+    `);
+    
+    console.log('Creating plans table...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "plans" (
+        "id" SERIAL PRIMARY KEY,
+        "name" TEXT NOT NULL,
+        "description" TEXT NOT NULL,
+        "price" REAL NOT NULL,
+        "billing_cycle" TEXT NOT NULL DEFAULT 'monthly',
+        "features" TEXT NOT NULL,
+        "is_active" BOOLEAN NOT NULL DEFAULT true,
+        "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
+        "updated_at" TIMESTAMP
+      );
+    `);
+    
+    // Create demo admin user with password 'admin'
+    console.log('Creating demo users...');
+    await pool.query(`
+      INSERT INTO users (username, password, business_name, industry, monthly_revenue, is_admin, status, currency)
+      VALUES (
+        'admin', 
+        '$2b$10$9ZKZB9SLG9EnKKbxuVzl6.LnH1aFXLXS1SUhC/8tNgPFEk7.WviC2',
+        'GrowWise Admin',
+        'Technology',
+        '$100,000+',
+        true,
+        'active',
+        'USD'
+      ) ON CONFLICT (username) DO NOTHING;
+      
+      INSERT INTO users (username, password, business_name, industry, monthly_revenue, is_admin, status, currency)
+      VALUES (
+        'demo', 
+        '$2b$10$9ZKZB9SLG9EnKKbxuVzl6.LnH1aFXLXS1SUhC/8tNgPFEk7.WviC2',
+        'Demo Business',
+        'Retail',
+        '$10,000-$50,000',
+        false,
+        'active',
+        'USD'
+      ) ON CONFLICT (username) DO NOTHING;
+    `);
+    
+    console.log('All tables created successfully!');
+    await pool.end();
+    
   } catch (error) {
     console.error('Error creating tables:', error);
-  } finally {
-    await pool.end();
   }
 }
 
-createTables().catch(console.error);
+pushTables().catch(console.error);
