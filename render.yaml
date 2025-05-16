@@ -12,4 +12,8 @@ services:
       - key: SESSION_SECRET
         generateValue: true
     healthCheckPath: /api/health
-    autoDeploy: true 
+    autoDeploy: true
+    plan: free
+    branches:
+      - name: main
+        autoDeployEnabled: true 
