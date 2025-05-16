@@ -2,20 +2,12 @@ import pg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
+// Use Neon DB connection string
+const connectionString = 'postgresql://neondb_owner:npg_aXKv0jhnJ8Wk@ep-flat-sun-a4bsmk19-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require';
 
 // Use standard pg instead of Neon's serverless version with WebSockets
 export const pool = new pg.Pool({
-  // Use individual connection parameters instead of connectionString
-  user: process.env.PGUSER,
-  host: process.env.PGHOST,
-  database: process.env.PGDATABASE,
-  password: process.env.PGPASSWORD,
-  port: parseInt(process.env.PGPORT || '5432'),
+  connectionString: connectionString,
   // Add SSL configuration for secure connections
   ssl: {
     rejectUnauthorized: false

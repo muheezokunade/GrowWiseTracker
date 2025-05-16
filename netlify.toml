@@ -1,0 +1,16 @@
+[build]
+  base = "."
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18" # Match your project's node version
+
+[context.production.environment]
+  API_URL = "https://growwise-api.onrender.com"
+  NODE_ENV = "production"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200 

@@ -86,6 +86,11 @@ export class DatabaseStorage implements IStorage {
       createTableIfMissing: true
     });
   }
+  
+  // Get the database pool for direct queries
+  getPool() {
+    return pool;
+  }
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {

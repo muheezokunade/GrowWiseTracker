@@ -2,16 +2,16 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 
+// Neon DB connection string
+const connectionString = 'postgresql://neondb_owner:npg_aXKv0jhnJ8Wk@ep-flat-sun-a4bsmk19-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require';
+
 async function pushTables() {
   try {
-    console.log('Connecting to database with standard PostgreSQL driver...');
+    console.log('Connecting to Neon database with standard PostgreSQL driver...');
     
+    // Use connectionString instead of individual parameters
     const pool = new Pool({
-      user: process.env.PGUSER,
-      host: process.env.PGHOST,
-      database: process.env.PGDATABASE,
-      password: process.env.PGPASSWORD,
-      port: parseInt(process.env.PGPORT || '5432'),
+      connectionString: connectionString,
       ssl: {
         rejectUnauthorized: false
       }
