@@ -13,7 +13,7 @@ services:
         generateValue: true
     healthCheckPath: /api/health
     autoDeploy: true
-    plan: free
+    plan: standard
     branches:
       - name: main
         autoDeployEnabled: true 
