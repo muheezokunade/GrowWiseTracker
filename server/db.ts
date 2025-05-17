@@ -14,10 +14,8 @@ export const pool = new pg.Pool({
   },
   // Connection pool settings
   max: 10, // Maximum number of clients in the pool
-  min: 1, // Minimum number of idle clients in the pool
   idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
   connectionTimeoutMillis: 10000, // How long to wait for a connection to be established
-  // Add retries for connection issues and rate limiting
   maxUses: 100, // Max number of times a client can be used before being recycled
   allowExitOnIdle: true // Allow closing idle clients during shutdown
 });
