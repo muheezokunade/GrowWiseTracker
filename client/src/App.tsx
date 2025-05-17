@@ -1,26 +1,26 @@
 import { Switch, Route } from "wouter";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
+import { Toaster } from "./components/ui/toaster";
+import { TooltipProvider } from "./components/ui/tooltip";
+import NotFound from "./pages/not-found";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AdminRoute } from "./lib/admin-route";
-import HomePage from "@/pages/home-page";
-import AuthPage from "@/pages/auth-page";
-import DashboardPage from "@/pages/dashboard-page";
-import TransactionsPage from "@/pages/transactions-page";
-import ProfitSplitPage from "@/pages/profit-split-page";
-import GrowthGoalsPage from "@/pages/growth-goals-page";
-import ReportsPage from "@/pages/reports-page";
-import SettingsPage from "@/pages/settings-page";
-import HelpPage from "@/pages/help-page";
-import OnboardingPage from "@/pages/onboarding-page";
+import HomePage from "./pages/home-page";
+import AuthPage from "./pages/auth-page";
+import DashboardPage from "./pages/dashboard-page";
+import TransactionsPage from "./pages/transactions-page";
+import ProfitSplitPage from "./pages/profit-split-page";
+import GrowthGoalsPage from "./pages/growth-goals-page";
+import ReportsPage from "./pages/reports-page";
+import SettingsPage from "./pages/settings-page";
+import HelpPage from "./pages/help-page";
+import OnboardingPage from "./pages/onboarding-page";
 
 // Admin pages
-import AdminDashboard from "@/pages/admin/admin-dashboard";
-import AdminUsers from "@/pages/admin/admin-users";
-import AdminSupport from "@/pages/admin/admin-support";
-import AdminNotifications from "@/pages/admin/admin-notifications";
-import AdminPlans from "@/pages/admin/admin-plans";
+import AdminDashboard from "./pages/admin/admin-dashboard";
+import AdminUsers from "./pages/admin/admin-users";
+import AdminSupport from "./pages/admin/admin-support";
+import AdminNotifications from "./pages/admin/admin-notifications";
+import AdminPlans from "./pages/admin/admin-plans";
 
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { useEffect } from "react";
