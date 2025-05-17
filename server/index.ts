@@ -72,12 +72,13 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Get PORT from environment variable for hosting platforms like Render
-  const port = process.env.PORT || 3000;
-  server.listen({
-    port,
-    host: "0.0.0.0", // Use 0.0.0.0 instead of 127.0.0.1 to listen on all network interfaces
-  }, () => {
+  // Read PORT from environment variable first - needed for Render
+  const port = parseInt(process.env.PORT || '3000', 10);
+  
+  console.log(`Starting server with host: 0.0.0.0 and port: ${port}`);
+  
+  server.listen(port, '0.0.0.0', () => {
+    console.log(`Server is running on 0.0.0.0:${port}`);
     log(`serving on port ${port}`);
   });
 })();
