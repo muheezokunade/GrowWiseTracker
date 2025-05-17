@@ -72,13 +72,11 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 3000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 3000;
+  // Get PORT from environment variable for hosting platforms like Render
+  const port = process.env.PORT || 3000;
   server.listen({
     port,
-    host: "127.0.0.1",
+    host: "0.0.0.0", // Use 0.0.0.0 instead of 127.0.0.1 to listen on all network interfaces
   }, () => {
     log(`serving on port ${port}`);
   });
