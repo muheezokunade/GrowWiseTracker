@@ -1,283 +1,243 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { MainLayout } from "@/components/layouts/MainLayout";
-import { GoalCard } from "@/components/goals/GoalCard";
-import { GoalForm } from "@/components/goals/GoalForm";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Plus } from "lucide-react";
-import { useState } from "react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { GrowthGoal } from "@shared/schema";
-import { useLocation } from "wouter";
-import queryString from "query-string";
-import { AddCashForm } from "@/components/goals/AddCashForm";
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Target, Calendar, DollarSign } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 export default function GrowthGoalsPage() {
-  const { toast } = useToast();
-  const [location] = useLocation();
-  const params = queryString.parse(location.split('?')[1] || '');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(params.action === "create");
-  const [editingGoal, setEditingGoal] = useState<GrowthGoal | null>(null);
-  const [addCashGoal, setAddCashGoal] = useState<GrowthGoal | null>(null);
-
-  // Fetch growth goals
-  const { data: goals, isLoading } = useQuery<GrowthGoal[]>({
-    queryKey: ["/api/growth-goals"],
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    targetAmount: '',
+    targetDate: ''
   });
 
-  // Create goal mutation
-  const createGoal = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/growth-goals", data);
-      return res.json();
+  const queryClient = useQueryClient();
+
+  const { data: goals = [], isLoading } = useQuery({
+    queryKey: ['growth-goals'],
+    queryFn: async () => {
+      const response = await fetch(`${API_URL}/api/growth-goals`, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch growth goals');
+      }
+      return response.json();
+    },
+  });
+
+  const addGoalMutation = useMutation({
+    mutationFn: async (goalData: any) => {
+      const response = await fetch(`${API_URL}/api/growth-goals`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(goalData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add growth goal');
+      }
+
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/growth-goals"] });
-      toast({
-        title: "Goal created",
-        description: "Your growth goal has been created successfully.",
-      });
-      setIsAddDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['growth-goals'] });
+      setShowAddForm(false);
+      setFormData({ name: '', targetAmount: '', targetDate: '' });
+      toast.success('Growth goal added successfully!');
     },
-    onError: (error) => {
-      toast({
-        title: "Failed to create goal",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
+    onError: () => {
+      toast.error('Failed to add growth goal');
     },
   });
 
-  // Update goal mutation
-  const updateGoal = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const res = await apiRequest("PUT", `/api/growth-goals/${id}`, data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/growth-goals"] });
-      toast({
-        title: "Goal updated",
-        description: "Your growth goal has been updated successfully.",
-      });
-      setEditingGoal(null);
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to update goal",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Delete goal mutation
-  const deleteGoal = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/growth-goals/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/growth-goals"] });
-      toast({
-        title: "Goal deleted",
-        description: "Your growth goal has been deleted successfully.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to delete goal",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Add cash to goal mutation
-  const addCashToGoal = useMutation({
-    mutationFn: async ({ id, amountToAdd }: { id: number; amountToAdd: number }) => {
-      const res = await apiRequest("POST", `/api/growth-goals/${id}/add-cash`, { amountToAdd });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/growth-goals"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-      toast({
-        title: "Cash added",
-        description: "Cash has been added to your growth goal successfully.",
-      });
-      setAddCashGoal(null);
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to add cash",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const formatDateForSubmission = (data: any) => {
-    const formattedData = { ...data };
-    
-    // If targetDate exists and is in DD/MM/YYYY format, convert to YYYY-MM-DD
-    if (formattedData.targetDate && formattedData.targetDate.includes('/')) {
-      const [day, month, year] = formattedData.targetDate.split('/');
-      formattedData.targetDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    }
-    
-    return formattedData;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    addGoalMutation.mutate(formData);
   };
 
-  const handleAddGoal = (data: any) => {
-    const formattedData = formatDateForSubmission(data);
-    createGoal.mutate(formattedData);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
   };
 
-  const handleUpdateGoal = (data: any) => {
-    if (editingGoal) {
-      const formattedData = formatDateForSubmission(data);
-      updateGoal.mutate({ id: editingGoal.id, data: formattedData });
-    }
-  };
-
-  const handleDeleteGoal = (goalId: number) => {
-    if (window.confirm("Are you sure you want to delete this goal?")) {
-      deleteGoal.mutate(goalId);
-    }
-  };
-
-  const handleEditGoal = (goal: GrowthGoal) => {
-    setEditingGoal(goal);
-  };
-  
-  const handleAddCash = (goal: GrowthGoal) => {
-    setAddCashGoal(goal);
-  };
-  
-  const handleSubmitAddCash = (data: { amountToAdd: number }) => {
-    if (addCashGoal) {
-      addCashToGoal.mutate({ 
-        id: addCashGoal.id, 
-        amountToAdd: data.amountToAdd 
-      });
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
-    <MainLayout title="Growth Goals">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <p className="text-gray-600">
-            Set and track financial goals for your business growth.
-          </p>
-          <Button
-            className="bg-[#27AE60] hover:bg-[#219653]"
-            onClick={() => setIsAddDialogOpen(true)}
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Growth Goals</h1>
+            <p className="text-gray-600">Set and track your business growth objectives</p>
+          </div>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Growth Goal
-          </Button>
+            Add Goal
+          </button>
         </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-[#27AE60]" />
-          </div>
-        ) : goals && Array.isArray(goals) && goals.length > 0 ? (
-          <div className="grid md:grid-cols-2 gap-6">
-            {goals.map((goal: GrowthGoal) => (
-              <GoalCard
-                key={goal.id}
-                goal={goal}
-                onEdit={() => handleEditGoal(goal)}
-                onDelete={() => handleDeleteGoal(goal.id)}
-                onAddCash={() => handleAddCash(goal)}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <div className="mx-auto w-16 h-16 bg-[#27AE60]/10 rounded-full flex items-center justify-center mb-4">
-              <TrendingUp className="h-8 w-8 text-[#27AE60]" />
-            </div>
-            <h3 className="text-lg font-medium mb-2">No Growth Goals Yet</h3>
-            <p className="text-gray-500 mb-6">
-              Create your first growth goal to start planning your business growth.
-            </p>
-            <Button
-              className="bg-[#27AE60] hover:bg-[#219653]"
-              onClick={() => setIsAddDialogOpen(true)}
-            >
-              Add Your First Goal
-            </Button>
+        {/* Add Goal Form */}
+        {showAddForm && (
+          <div className="bg-white p-6 rounded-lg shadow-sm border mb-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Growth Goal</h3>
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Goal Name
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="e.g., Expand marketing budget"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Target Amount ($)
+                </label>
+                <input
+                  type="number"
+                  name="targetAmount"
+                  value={formData.targetAmount}
+                  onChange={handleChange}
+                  step="0.01"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Target Date
+                </label>
+                <input
+                  type="date"
+                  name="targetDate"
+                  value={formData.targetDate}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+
+              <div className="md:col-span-3 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addGoalMutation.isPending}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                >
+                  {addGoalMutation.isPending ? 'Adding...' : 'Add Goal'}
+                </button>
+              </div>
+            </form>
           </div>
         )}
 
-        {/* Add Goal Dialog */}
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Growth Goal</DialogTitle>
-            </DialogHeader>
-            <GoalForm onSubmit={handleAddGoal} isSubmitting={createGoal.isPending} />
-          </DialogContent>
-        </Dialog>
+        {/* Goals Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {goals.map((goal: any) => {
+            const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
+            const isCompleted = progress >= 100;
+            
+            return (
+              <div key={goal.id} className="bg-white p-6 rounded-lg shadow-sm border">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className={`p-2 rounded-lg ${isCompleted ? 'bg-green-100' : 'bg-blue-100'}`}>
+                      <Target className={`h-5 w-5 ${isCompleted ? 'text-green-600' : 'text-blue-600'}`} />
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="font-semibold text-gray-900">{goal.name}</h3>
+                      {isCompleted && (
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                          Completed
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-        {/* Edit Goal Dialog */}
-        <Dialog open={!!editingGoal} onOpenChange={(open) => !open && setEditingGoal(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Growth Goal</DialogTitle>
-            </DialogHeader>
-            {editingGoal && (
-              <GoalForm
-                onSubmit={handleUpdateGoal}
-                isSubmitting={updateGoal.isPending}
-                initialData={editingGoal}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
-        
-        {/* Add Cash Dialog */}
-        <Dialog open={!!addCashGoal} onOpenChange={(open) => !open && setAddCashGoal(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Cash to Goal</DialogTitle>
-            </DialogHeader>
-            {addCashGoal && (
-              <AddCashForm
-                onSubmit={handleSubmitAddCash}
-                isSubmitting={addCashToGoal.isPending}
-                currentAmount={addCashGoal.currentAmount}
-                targetAmount={addCashGoal.targetAmount}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>Progress</span>
+                    <span>{progress.toFixed(1)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full ${isCompleted ? 'bg-green-500' : 'bg-blue-500'}`}
+                      style={{ width: `${Math.min(progress, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    <span>${goal.currentAmount.toFixed(2)} / ${goal.targetAmount.toFixed(2)}</span>
+                  </div>
+                  
+                  {goal.targetDate && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      <span>{new Date(goal.targetDate).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </div>
+
+                {!isCompleted && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <p className="text-xs text-gray-500">
+                      Remaining: ${(goal.targetAmount - goal.currentAmount).toFixed(2)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {goals.length === 0 && (
+          <div className="text-center py-12">
+            <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No growth goals yet</h3>
+            <p className="text-gray-500 mb-4">Set your first growth goal to start tracking your business objectives.</p>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+            >
+              Add Your First Goal
+            </button>
+          </div>
+        )}
       </div>
-    </MainLayout>
-  );
-}
-
-// Inline component for empty state
-function TrendingUp(props: any) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-      <polyline points="17 6 23 6 23 12" />
-    </svg>
+    </div>
   );
 }

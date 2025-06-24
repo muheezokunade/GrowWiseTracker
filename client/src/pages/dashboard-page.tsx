@@ -1,222 +1,147 @@
-import { useQuery } from "@tanstack/react-query";
-import { MainLayout } from "@/components/layouts/MainLayout";
-import { KpiCard } from "@/components/dashboard/KpiCard";
-import { CashReserveChart } from "@/components/dashboard/CashReserveChart";
-import { SmartSuggestionCard } from "@/components/dashboard/SmartSuggestionCard";
-import { TransactionItem } from "@/components/transactions/TransactionItem";
-import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
-import { Loader2, PlusCircle, TrendingUp, BadgeDollarSign, BarChart, ArrowDownCircle, PiggyBank, PieChart, AlertCircle } from "lucide-react";
-import { Transaction } from "@shared/schema";
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { TrendingUp, DollarSign, PiggyBank, Target } from 'lucide-react';
 
-// Smart suggestions
-const smartSuggestions = [
-  {
-    type: "tip" as const,
-    text: "Your cash reserve is growing well. Consider boosting your reinvestment allocation this month.",
-  },
-  {
-    type: "alert" as const,
-    text: "It's a good time to review your software subscriptions - they've increased 15% from last month.",
-  },
-];
-
-interface DashboardData {
-  summary: {
-    revenue: number;
-    expenses: number;
-    profit: number;
-    cashReserve: number;
-  };
-  cashReserveData: Array<{ date: string; amount: number }>;
-  recentTransactions: Array<Transaction>;
-  growthGoals: Array<any>;
-  profitSplit?: {
-    ownerPay: number;
-    reinvestment: number;
-    savings: number;
-    taxReserve: number;
-  };
-}
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 export default function DashboardPage() {
-  // Fetch dashboard summary
-  const { data, isLoading, error } = useQuery<DashboardData>({
-    queryKey: ["/api/dashboard/summary"],
-    refetchOnMount: true, // Always refetch when mounting this component
+  const { data: dashboardData, isLoading } = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: async () => {
+      const response = await fetch(`${API_URL}/api/dashboard`, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data');
+      }
+      return response.json();
+    },
   });
-  
+
   if (isLoading) {
     return (
-      <MainLayout title="Dashboard">
-        <div className="flex flex-col items-center justify-center min-h-[300px]">
-          <Loader2 className="loading-spinner" />
-          <p className="text-muted-foreground mt-4 text-sm animate-pulse-soft">Loading your financial dashboard...</p>
-        </div>
-      </MainLayout>
-    );
-  }
-  
-  if (error) {
-    return (
-      <MainLayout title="Dashboard">
-        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6 text-destructive flex items-center space-x-2">
-          <div className="h-10 w-10 rounded-full bg-destructive/20 flex items-center justify-center">
-            <AlertCircle className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="font-medium">Unable to load dashboard data</h3>
-            <p className="text-sm">Please refresh the page or try again later.</p>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
-  
-  const summary = data?.summary || {
-    revenue: 12450,
-    expenses: 7128,
-    profit: 5322,
-    cashReserve: 15750,
-  };
-  
-  const recentTransactions = data?.recentTransactions || [];
-  
-  return (
-    <MainLayout title="Dashboard">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-end mb-4">
-          <select className="bg-card border border-input text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
-            <option>This Month</option>
-            <option>Last Month</option>
-            <option>Last 3 Months</option>
-            <option>Year to Date</option>
-          </select>
-        </div>
-        
-        {/* KPI Cards Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-4 mb-6">
-          <KpiCard
-            title="Revenue"
-            value={summary.revenue}
-            percentageChange={8.2}
-            comparisonText="vs last month"
-            icon={<BarChart className="h-10 w-10" />}
-          />
-          
-          <KpiCard
-            title="Expenses"
-            value={summary.expenses}
-            percentageChange={-3.4}
-            comparisonText="vs last month"
-            icon={<ArrowDownCircle className="h-10 w-10" />}
-          />
-          
-          <KpiCard
-            title="Profit"
-            value={summary.profit}
-            percentageChange={14.3}
-            comparisonText="vs last month"
-            isProfitCard={true}
-            icon={<PiggyBank className="h-10 w-10" />}
-          />
-        </div>
-        
-        {/* Cash Reserve Graph Card */}
-        <CashReserveChart
-          data={data?.cashReserveData || []}
-          availableAmount={summary.cashReserve}
-        />
-        
-        {/* Quick Actions Grid */}
-        <h2 className="font-heading font-semibold text-lg mb-3">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-          <Link href="/transactions?action=add">
-            <Button variant="outline" className="card-hover h-auto w-full py-4 flex flex-col items-center space-y-2">
-              <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
-                <PlusCircle className="h-5 w-5 text-primary" />
-              </div>
-              <span className="text-sm font-medium">Add Expense</span>
-            </Button>
-          </Link>
-          
-          <Link href="/growth-goals?action=create">
-            <Button variant="outline" className="card-hover h-auto w-full py-4 flex flex-col items-center space-y-2">
-              <div className="h-10 w-10 bg-accent/10 rounded-full flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-accent" />
-              </div>
-              <span className="text-sm font-medium">Create Goal</span>
-            </Button>
-          </Link>
-          
-          <Link href="/profit-split">
-            <Button variant="outline" className="card-hover h-auto w-full py-4 flex flex-col items-center space-y-2">
-              <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
-                <BadgeDollarSign className="h-5 w-5 text-primary" />
-              </div>
-              <span className="text-sm font-medium">Split Profit</span>
-            </Button>
-          </Link>
-        </div>
-        
-        {/* Smart Suggestions Card */}
-        <SmartSuggestionCard suggestions={smartSuggestions} />
-        
-        {/* Recent Transactions Preview */}
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="font-heading font-semibold text-lg">Recent Transactions</h2>
-          <Link href="/transactions">
-            <span className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
-              View all
-            </span>
-          </Link>
-        </div>
-        <div className="bg-card rounded-xl border shadow-card overflow-hidden card-hover">
-          <div className="divide-y divide-border">
-            {recentTransactions.length > 0 ? (
-              recentTransactions.map((transaction) => (
-                <TransactionItem key={transaction.id} transaction={transaction} />
-              ))
-            ) : (
-              <>
-                <TransactionItem
-                  transaction={{
-                    id: 1,
-                    userId: 1,
-                    description: "Software Subscription",
-                    amount: 49.99,
-                    type: "expense",
-                    category: "Software",
-                    date: new Date("2023-03-12"),
-                  }}
-                />
-                <TransactionItem
-                  transaction={{
-                    id: 2,
-                    userId: 1,
-                    description: "Client Payment",
-                    amount: 1200,
-                    type: "income",
-                    category: "Income",
-                    date: new Date("2023-03-10"),
-                  }}
-                />
-                <TransactionItem
-                  transaction={{
-                    id: 3,
-                    userId: 1,
-                    description: "Office Rent",
-                    amount: 850,
-                    type: "expense",
-                    category: "Rent",
-                    date: new Date("2023-03-05"),
-                  }}
-                />
-              </>
-            )}
-          </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
-    </MainLayout>
+    );
+  }
+
+  const {
+    totalRevenue = 0,
+    totalExpenses = 0,
+    profit = 0,
+    cashReserve = 0,
+    profitMargin = 0,
+    goals = []
+  } = dashboardData || {};
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600">Welcome back! Here's your business overview.</p>
+        </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <TrendingUp className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                <p className="text-2xl font-bold text-gray-900">${totalRevenue.toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <DollarSign className="h-6 w-6 text-red-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Expenses</p>
+                <p className="text-2xl font-bold text-gray-900">${totalExpenses.toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <PiggyBank className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Monthly Profit</p>
+                <p className="text-2xl font-bold text-gray-900">${profit.toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Target className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Cash Reserve</p>
+                <p className="text-2xl font-bold text-gray-900">${cashReserve.toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Profit Margin */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Profit Margin</h3>
+          <div className="flex items-center">
+            <div className="flex-1 bg-gray-200 rounded-full h-4">
+              <div
+                className="bg-green-600 h-4 rounded-full"
+                style={{ width: `${Math.min(profitMargin, 100)}%` }}
+              ></div>
+            </div>
+            <span className="ml-4 text-lg font-semibold text-gray-900">
+              {profitMargin.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+
+        {/* Recent Goals */}
+        {goals.length > 0 && (
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Growth Goals</h3>
+            <div className="space-y-4">
+              {goals.map((goal: any) => (
+                <div key={goal.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <h4 className="font-medium text-gray-900">{goal.name}</h4>
+                    <p className="text-sm text-gray-600">
+                      ${goal.currentAmount.toFixed(2)} / ${goal.targetAmount.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="w-32 bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-green-600 h-2 rounded-full"
+                        style={{
+                          width: `${Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)}%`
+                        }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {((goal.currentAmount / goal.targetAmount) * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

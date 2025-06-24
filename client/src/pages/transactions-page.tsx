@@ -1,554 +1,278 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { MainLayout } from "@/components/layouts/MainLayout";
-import { TransactionItem } from "@/components/transactions/TransactionItem";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Transaction, insertTransactionSchema } from "@shared/schema";
-import { Loader2, PlusCircle, Search } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
-import queryString from "query-string";
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Filter } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-// Define form schema for transactions
-const transactionFormSchema = z.object({
-  description: z.string().min(1, "Description is required"),
-  amount: z.coerce.number().positive("Amount must be positive"),
-  type: z.enum(["income", "expense"]),
-  category: z.string().optional(),
-  date: z.string().refine(
-    (val) => {
-      // Accept either YYYY-MM-DD, DD/MM/YYYY, or MM/DD/YYYY formats
-      return (
-        /^\d{4}-\d{2}-\d{2}$/.test(val) || 
-        /^\d{2}\/\d{2}\/\d{4}$/.test(val) ||
-        /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)
-      );
-    }, 
-    { message: "Date must be in a valid format (YYYY-MM-DD or DD/MM/YYYY)" }
-  ),
-});
-
-type TransactionFormValues = z.infer<typeof transactionFormSchema>;
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 export default function TransactionsPage() {
-  const { toast } = useToast();
-  const [location] = useLocation();
-  const params = queryString.parse(location.split('?')[1] || '');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(params.action === "add");
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [currentTransaction, setCurrentTransaction] = useState<Transaction | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  // Fetch transactions
-  const { data: transactions, isLoading } = useQuery<Transaction[]>({
-    queryKey: ["/api/transactions"],
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formData, setFormData] = useState({
+    description: '',
+    amount: '',
+    type: 'expense',
+    category: '',
+    date: new Date().toISOString().split('T')[0]
   });
 
-  // Add transaction mutation
-  const addMutation = useMutation({
-    mutationFn: async (data: TransactionFormValues) => {
-      const res = await apiRequest("POST", "/api/transactions", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-      toast({
-        title: "Transaction added",
-        description: "Your transaction has been added successfully.",
+  const queryClient = useQueryClient();
+
+  const { data: transactions = [], isLoading } = useQuery({
+    queryKey: ['transactions'],
+    queryFn: async () => {
+      const response = await fetch(`${API_URL}/api/transactions`, {
+        credentials: 'include',
       });
-      setIsAddDialogOpen(false);
-      addForm.reset();
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to add transaction",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch transactions');
+      }
+      return response.json();
     },
   });
 
-  // Edit transaction mutation
-  const editMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<TransactionFormValues> }) => {
-      // Ensure date is in the correct format
-      let formattedData = { ...data };
-      if (formattedData.date) {
-        // Ensure date is in YYYY-MM-DD format for the server
-        if (typeof formattedData.date === 'string') {
-          if (formattedData.date.includes('/')) {
-            const [day, month, year] = formattedData.date.split('/');
-            formattedData.date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-          }
-        }
+  const addTransactionMutation = useMutation({
+    mutationFn: async (transactionData: any) => {
+      const response = await fetch(`${API_URL}/api/transactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(transactionData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add transaction');
       }
 
-      const res = await apiRequest("PUT", `/api/transactions/${id}`, formattedData);
-      return res.json();
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-      toast({
-        title: "Transaction updated",
-        description: "Your transaction has been updated successfully.",
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setShowAddForm(false);
+      setFormData({
+        description: '',
+        amount: '',
+        type: 'expense',
+        category: '',
+        date: new Date().toISOString().split('T')[0]
       });
-      setIsEditDialogOpen(false);
-      setCurrentTransaction(null);
+      toast.success('Transaction added successfully!');
     },
-    onError: (error) => {
-      toast({
-        title: "Failed to update transaction",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
+    onError: () => {
+      toast.error('Failed to add transaction');
     },
   });
 
-  // Delete transaction mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/transactions/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-      toast({
-        title: "Transaction deleted",
-        description: "Your transaction has been deleted successfully.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to delete transaction",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Form for adding new transactions
-  const addForm = useForm<TransactionFormValues>({
-    resolver: zodResolver(transactionFormSchema),
-    defaultValues: {
-      description: "",
-      amount: 0,
-      type: "expense",
-      category: "",
-      date: new Date().toISOString().split("T")[0],
-    },
-  });
-
-  // Form for editing transactions
-  const editForm = useForm<TransactionFormValues>({
-    resolver: zodResolver(transactionFormSchema),
-    // Default values will be set when a transaction is selected for editing
-  });
-
-  // Handle adding a new transaction
-  const onAddSubmit = (data: TransactionFormValues) => {
-    // Ensure date is in the correct format 'YYYY-MM-DD'
-    let formattedData = { ...data };
-    
-    // Format the date to ensure it's in the expected format
-    if (formattedData.date) {
-      // If date is in DD/MM/YYYY format, convert to YYYY-MM-DD
-      if (formattedData.date.includes('/')) {
-        const [day, month, year] = formattedData.date.split('/');
-        formattedData.date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-      }
-    }
-    
-    addMutation.mutate(formattedData);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    addTransactionMutation.mutate(formData);
   };
 
-  // Handle editing a transaction
-  const onEditSubmit = (data: TransactionFormValues) => {
-    if (currentTransaction) {
-      // Directly use the data from the form as editMutation already handles date formatting
-      editMutation.mutate({
-        id: currentTransaction.id,
-        data: data,
-      });
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
   };
 
-  // Handle editing a transaction
-  const handleEdit = (transaction: Transaction) => {
-    setCurrentTransaction(transaction);
-    editForm.reset({
-      description: transaction.description,
-      amount: transaction.amount,
-      type: transaction.type as "income" | "expense",
-      category: transaction.category || "",
-      date: new Date(transaction.date).toISOString().split("T")[0],
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  // Handle deleting a transaction
-  const handleDelete = (id: number) => {
-    if (window.confirm("Are you sure you want to delete this transaction?")) {
-      deleteMutation.mutate(id);
-    }
-  };
-
-  // Filter transactions by search term
-  const filteredTransactions = transactions && Array.isArray(transactions) 
-    ? transactions.filter(
-        (transaction: Transaction) =>
-          transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (transaction.category &&
-            transaction.category.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-    : [];
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
-    <MainLayout title="Transactions">
-      <div className="max-w-4xl mx-auto">
-        {/* Search and Add Bar */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="relative flex-grow">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search transactions..."
-              className="pl-9"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
+            <p className="text-gray-600">Track your income and expenses</p>
           </div>
-          <Button
-            className="bg-[#27AE60] hover:bg-[#219653]"
-            onClick={() => setIsAddDialogOpen(true)}
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center"
           >
-            <PlusCircle className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 mr-2" />
             Add Transaction
-          </Button>
+          </button>
         </div>
 
-        {/* Transactions List */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-[#27AE60]" />
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            {filteredTransactions && filteredTransactions.length > 0 ? (
-              <div className="divide-y divide-gray-200">
-                {filteredTransactions.map((transaction: Transaction) => (
-                  <TransactionItem
-                    key={transaction.id}
-                    transaction={transaction}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
-                ))}
+        {/* Add Transaction Form */}
+        {showAddForm && (
+          <div className="bg-white p-6 rounded-lg shadow-sm border mb-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Transaction</h3>
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <input
+                  type="text"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+                />
               </div>
-            ) : (
-              <div className="py-12 text-center">
-                <p className="text-gray-500">
-                  {searchTerm
-                    ? "No transactions match your search."
-                    : "No transactions yet. Add your first transaction!"}
-                </p>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Amount
+                </label>
+                <input
+                  type="number"
+                  name="amount"
+                  value={formData.amount}
+                  onChange={handleChange}
+                  step="0.01"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+                />
               </div>
-            )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Type
+                </label>
+                <select
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="income">Income</option>
+                  <option value="expense">Expense</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category
+                </label>
+                <input
+                  type="text"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  placeholder="e.g., Marketing, Rent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  name="date"
+                  value={formData.date}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+
+              <div className="md:col-span-2 lg:col-span-5 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addTransactionMutation.isPending}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                >
+                  {addTransactionMutation.isPending ? 'Adding...' : 'Add Transaction'}
+                </button>
+              </div>
+            </form>
           </div>
         )}
 
-        {/* Add Transaction Dialog */}
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Transaction</DialogTitle>
-              <DialogDescription>
-                Add a new income or expense transaction to track your finances.
-              </DialogDescription>
-            </DialogHeader>
+        {/* Transactions List */}
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
+              <button className="flex items-center text-gray-600 hover:text-gray-900">
+                <Filter className="h-4 w-4 mr-2" />
+                Filter
+              </button>
+            </div>
+          </div>
 
-            <Form {...addForm}>
-              <form onSubmit={addForm.handleSubmit(onAddSubmit)} className="space-y-4">
-                <FormField
-                  control={addForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input placeholder="E.g., Client Payment" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {transactions.map((transaction: any) => (
+                  <tr key={transaction.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {transaction.description}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`font-medium ${
+                        transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {transaction.type === 'income' ? '+' : '-'}${Math.abs(transaction.amount).toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        transaction.type === 'income' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {transaction.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {transaction.category || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(transaction.date).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={addForm.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Amount</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="0.00"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={addForm.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="income">Income</SelectItem>
-                            <SelectItem value="expense">Expense</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={addForm.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Category</FormLabel>
-                        <FormControl>
-                          <Input placeholder="E.g., Software, Rent" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={addForm.control}
-                    name="date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsAddDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-[#27AE60] hover:bg-[#219653]"
-                    disabled={addMutation.isPending}
-                  >
-                    {addMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Adding...
-                      </>
-                    ) : (
-                      "Add Transaction"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Transaction Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Transaction</DialogTitle>
-              <DialogDescription>
-                Update the details of your transaction.
-              </DialogDescription>
-            </DialogHeader>
-
-            <Form {...editForm}>
-              <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-                <FormField
-                  control={editForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input placeholder="E.g., Client Payment" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={editForm.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Amount</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="0.00"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={editForm.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="income">Income</SelectItem>
-                            <SelectItem value="expense">Expense</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={editForm.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Category</FormLabel>
-                        <FormControl>
-                          <Input placeholder="E.g., Software, Rent" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={editForm.control}
-                    name="date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsEditDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-[#27AE60] hover:bg-[#219653]"
-                    disabled={editMutation.isPending}
-                  >
-                    {editMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Updating...
-                      </>
-                    ) : (
-                      "Update Transaction"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+            {transactions.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No transactions yet. Add your first transaction to get started!</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-    </MainLayout>
+    </div>
   );
 }

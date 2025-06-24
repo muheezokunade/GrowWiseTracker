@@ -1,259 +1,284 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { MainLayout } from "@/components/layouts/MainLayout";
-import { ProfitSlider } from "@/components/profits/ProfitSlider";
-import { ProfitSplitChart } from "@/components/profits/ProfitSplitChart";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save } from "lucide-react";
-import { useState, useEffect } from "react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { useCurrency } from "@/hooks/use-currency";
-import { ProfitSplit } from "@shared/schema";
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { PieChart, Save } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-interface ProfitSplitFormState {
-  ownerPay: number;
-  reinvestment: number;
-  savings: number;
-  taxReserve: number;
-}
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 export default function ProfitSplitPage() {
-  const { toast } = useToast();
-  const { formatCurrency } = useCurrency();
-  const [isModified, setIsModified] = useState(false);
-  const [profitSplit, setProfitSplit] = useState<ProfitSplitFormState>({
+  const [splits, setSplits] = useState({
     ownerPay: 40,
     reinvestment: 30,
     savings: 20,
-    taxReserve: 10,
+    taxReserve: 10
   });
 
-  // Fetch profit split and dashboard data
-  const { data: profitSplitData, isLoading: isLoadingProfitSplit } = useQuery<ProfitSplit>({
-    queryKey: ["/api/profit-split"],
-  });
-  
-  // Update profit split state when data changes
-  useEffect(() => {
-    if (profitSplitData) {
-      setProfitSplit({
-        ownerPay: profitSplitData.ownerPay,
-        reinvestment: profitSplitData.reinvestment,
-        savings: profitSplitData.savings,
-        taxReserve: profitSplitData.taxReserve,
+  const queryClient = useQueryClient();
+
+  const { data: profitSplits, isLoading } = useQuery({
+    queryKey: ['profit-splits'],
+    queryFn: async () => {
+      const response = await fetch(`${API_URL}/api/profit-splits`, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch profit splits');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setSplits({
+        ownerPay: data.ownerPay || 40,
+        reinvestment: data.reinvestment || 30,
+        savings: data.savings || 20,
+        taxReserve: data.taxReserve || 10
       });
     }
-  }, [profitSplitData]);
-
-  interface DashboardSummary {
-    summary: {
-      profit: number;
-      revenue: number;
-      expenses: number;
-    };
-  }
-
-  const { data: dashboardData, isLoading: isLoadingDashboard } = useQuery<DashboardSummary>({
-    queryKey: ["/api/dashboard/summary"],
   });
 
-  // Update profit split mutation
-  const updateProfitSplit = useMutation({
-    mutationFn: async (data: ProfitSplitFormState) => {
-      const res = await apiRequest("PUT", "/api/profit-split", data);
-      return res.json();
+  const updateSplitsMutation = useMutation({
+    mutationFn: async (splitData: any) => {
+      const response = await fetch(`${API_URL}/api/profit-splits`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(splitData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profit splits');
+      }
+
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profit-split"] });
-      toast({
-        title: "Profit split updated",
-        description: "Your profit allocation has been updated successfully.",
-      });
-      setIsModified(false);
+      queryClient.invalidateQueries({ queryKey: ['profit-splits'] });
+      toast.success('Profit splits updated successfully!');
     },
-    onError: (error) => {
-      toast({
-        title: "Failed to update profit split",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
+    onError: () => {
+      toast.error('Failed to update profit splits');
     },
   });
 
+  const handleSliderChange = (category: string, value: number) => {
+    setSplits(prev => ({
+      ...prev,
+      [category]: value
+    }));
+  };
+
   const handleSave = () => {
-    updateProfitSplit.mutate(profitSplit);
-  };
-
-  const handleSliderChange = (key: keyof ProfitSplitFormState, value: number) => {
-    const newSplit = { ...profitSplit, [key]: value };
-    
-    // Adjust other values to ensure total is 100%
-    const total = Object.values(newSplit).reduce((sum, val) => sum + val, 0);
-    
-    if (total !== 100) {
-      const diff = 100 - total;
-      const keysToAdjust = Object.keys(newSplit).filter(k => k !== key) as Array<keyof ProfitSplitFormState>;
-      
-      // Distribute difference proportionally
-      const currentSum = keysToAdjust.reduce((sum, k) => sum + newSplit[k], 0);
-      
-      if (currentSum > 0) {
-        keysToAdjust.forEach(k => {
-          const proportion = newSplit[k] / currentSum;
-          newSplit[k] = Math.max(0, Math.round(newSplit[k] + diff * proportion));
-        });
-      }
-      
-      // Ensure we have exactly 100%
-      const finalTotal = Object.values(newSplit).reduce((sum, val) => sum + val, 0);
-      if (finalTotal !== 100) {
-        const lastKey = keysToAdjust[keysToAdjust.length - 1];
-        newSplit[lastKey] += (100 - finalTotal);
-      }
+    const total = Object.values(splits).reduce((sum, value) => sum + value, 0);
+    if (Math.abs(total - 100) > 0.1) {
+      toast.error('Profit splits must total 100%');
+      return;
     }
-    
-    setProfitSplit(newSplit);
-    setIsModified(true);
+    updateSplitsMutation.mutate(splits);
   };
 
-  const isLoading = isLoadingProfitSplit || isLoadingDashboard;
-  const currentMonthProfit = dashboardData?.summary?.profit || 0;
+  const totalPercentage = Object.values(splits).reduce((sum, value) => sum + value, 0);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
-    <MainLayout title="Profit Split">
+    <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-[#27AE60]" />
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Profit Split</h1>
+          <p className="text-gray-600">Allocate your profits strategically across different buckets</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Profit Split Controls */}
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Allocation Settings</h3>
+            
+            <div className="space-y-6">
+              {/* Owner Pay */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-sm font-medium text-gray-700">Owner Pay</label>
+                  <span className="text-sm font-semibold text-gray-900">{splits.ownerPay}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={splits.ownerPay}
+                  onChange={(e) => handleSliderChange('ownerPay', parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-green"
+                />
+                <p className="text-xs text-gray-500 mt-1">Money you take home as the business owner</p>
+              </div>
+
+              {/* Reinvestment */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-sm font-medium text-gray-700">Reinvestment</label>
+                  <span className="text-sm font-semibold text-gray-900">{splits.reinvestment}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={splits.reinvestment}
+                  onChange={(e) => handleSliderChange('reinvestment', parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-blue"
+                />
+                <p className="text-xs text-gray-500 mt-1">Funds for business growth and expansion</p>
+              </div>
+
+              {/* Savings */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-sm font-medium text-gray-700">Savings</label>
+                  <span className="text-sm font-semibold text-gray-900">{splits.savings}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={splits.savings}
+                  onChange={(e) => handleSliderChange('savings', parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-purple"
+                />
+                <p className="text-xs text-gray-500 mt-1">Emergency fund and future opportunities</p>
+              </div>
+
+              {/* Tax Reserve */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-sm font-medium text-gray-700">Tax Reserve</label>
+                  <span className="text-sm font-semibold text-gray-900">{splits.taxReserve}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={splits.taxReserve}
+                  onChange={(e) => handleSliderChange('taxReserve', parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-orange"
+                />
+                <p className="text-xs text-gray-500 mt-1">Set aside for tax obligations</p>
+              </div>
+            </div>
+
+            {/* Total and Save */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-lg font-semibold text-gray-900">Total:</span>
+                <span className={`text-lg font-bold ${
+                  Math.abs(totalPercentage - 100) < 0.1 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {totalPercentage.toFixed(1)}%
+                </span>
+              </div>
+              
+              {Math.abs(totalPercentage - 100) > 0.1 && (
+                <p className="text-sm text-red-600 mb-4">
+                  Profit splits must total 100%. Adjust the sliders above.
+                </p>
+              )}
+
+              <button
+                onClick={handleSave}
+                disabled={Math.abs(totalPercentage - 100) > 0.1 || updateSplitsMutation.isPending}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center justify-center"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {updateSplitsMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
           </div>
-        ) : (
-          <>
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Monthly Profit Allocation</CardTitle>
-                <CardDescription>
-                  Distribute your monthly profit across these categories to help your business grow sustainably.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-lg font-medium">This Month's Profit</h3>
-                    <span className="text-2xl font-semibold text-[#27AE60]">
-                      {formatCurrency(currentMonthProfit)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    Allocate your profit using the sliders below. Changes will be reflected in the chart.
-                  </p>
-                </div>
 
-                <div className="grid md:grid-cols-2 gap-8">
-                  <div className="space-y-6">
-                    <ProfitSlider
-                      label="Owner Pay"
-                      value={profitSplit.ownerPay}
-                      onChange={(value) => handleSliderChange("ownerPay", value)}
-                      description="Your personal compensation"
-                      amount={currentMonthProfit * (profitSplit.ownerPay / 100)}
-                    />
-                    
-                    <ProfitSlider
-                      label="Reinvestment"
-                      value={profitSplit.reinvestment}
-                      onChange={(value) => handleSliderChange("reinvestment", value)}
-                      description="For growing your business"
-                      amount={currentMonthProfit * (profitSplit.reinvestment / 100)}
-                    />
-                    
-                    <ProfitSlider
-                      label="Savings"
-                      value={profitSplit.savings}
-                      onChange={(value) => handleSliderChange("savings", value)}
-                      description="Emergency fund and future opportunities"
-                      amount={currentMonthProfit * (profitSplit.savings / 100)}
-                    />
-                    
-                    <ProfitSlider
-                      label="Tax Reserve"
-                      value={profitSplit.taxReserve}
-                      onChange={(value) => handleSliderChange("taxReserve", value)}
-                      description="Set aside for taxes"
-                      amount={currentMonthProfit * (profitSplit.taxReserve / 100)}
-                    />
+          {/* Visual Representation */}
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Allocation Overview</h3>
+            
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <div className="w-4 h-4 bg-green-500 rounded mr-3"></div>
+                <div className="flex-1">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-700">Owner Pay</span>
+                    <span className="text-sm text-gray-900">{splits.ownerPay}%</span>
                   </div>
-                  
-                  <div className="flex flex-col justify-center">
-                    <ProfitSplitChart
-                      data={[
-                        { name: "Owner Pay", value: profitSplit.ownerPay, amount: currentMonthProfit * (profitSplit.ownerPay / 100) },
-                        { name: "Reinvestment", value: profitSplit.reinvestment, amount: currentMonthProfit * (profitSplit.reinvestment / 100) },
-                        { name: "Savings", value: profitSplit.savings, amount: currentMonthProfit * (profitSplit.savings / 100) },
-                        { name: "Tax Reserve", value: profitSplit.taxReserve, amount: currentMonthProfit * (profitSplit.taxReserve / 100) },
-                      ]}
-                    />
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                    <div 
+                      className="bg-green-500 h-2 rounded-full" 
+                      style={{ width: `${splits.ownerPay}%` }}
+                    ></div>
                   </div>
                 </div>
+              </div>
 
-                <div className="mt-8">
-                  <Button
-                    className="bg-[#27AE60] hover:bg-[#219653]"
-                    onClick={handleSave}
-                    disabled={!isModified || updateProfitSplit.isPending}
-                  >
-                    {updateProfitSplit.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Save Allocation
-                      </>
-                    )}
-                  </Button>
+              <div className="flex items-center">
+                <div className="w-4 h-4 bg-blue-500 rounded mr-3"></div>
+                <div className="flex-1">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-700">Reinvestment</span>
+                    <span className="text-sm text-gray-900">{splits.reinvestment}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full" 
+                      style={{ width: `${splits.reinvestment}%` }}
+                    ></div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Tips for Healthy Profit Allocation</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  <li className="flex items-start">
-                    <span className="h-5 w-5 bg-[#27AE60]/20 rounded-full flex items-center justify-center text-[#27AE60] mr-2 flex-shrink-0">•</span>
-                    <span className="text-sm">
-                      <strong>Owner Pay (30-50%):</strong> Pay yourself consistently to maintain personal financial stability.
-                    </span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="h-5 w-5 bg-[#27AE60]/20 rounded-full flex items-center justify-center text-[#27AE60] mr-2 flex-shrink-0">•</span>
-                    <span className="text-sm">
-                      <strong>Reinvestment (20-40%):</strong> Fuel growth by allocating funds to marketing, equipment, or hiring.
-                    </span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="h-5 w-5 bg-[#27AE60]/20 rounded-full flex items-center justify-center text-[#27AE60] mr-2 flex-shrink-0">•</span>
-                    <span className="text-sm">
-                      <strong>Savings (10-25%):</strong> Build a 3-6 month operating expense cushion for emergencies.
-                    </span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="h-5 w-5 bg-[#27AE60]/20 rounded-full flex items-center justify-center text-[#27AE60] mr-2 flex-shrink-0">•</span>
-                    <span className="text-sm">
-                      <strong>Tax Reserve (10-20%):</strong> Set aside money for quarterly or annual tax payments to avoid surprises.
-                    </span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-          </>
-        )}
+              <div className="flex items-center">
+                <div className="w-4 h-4 bg-purple-500 rounded mr-3"></div>
+                <div className="flex-1">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-700">Savings</span>
+                    <span className="text-sm text-gray-900">{splits.savings}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                    <div 
+                      className="bg-purple-500 h-2 rounded-full" 
+                      style={{ width: `${splits.savings}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center">
+                <div className="w-4 h-4 bg-orange-500 rounded mr-3"></div>
+                <div className="flex-1">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-700">Tax Reserve</span>
+                    <span className="text-sm text-gray-900">{splits.taxReserve}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                    <div 
+                      className="bg-orange-500 h-2 rounded-full" 
+                      style={{ width: `${splits.taxReserve}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-2">Recommended Split</h4>
+              <p className="text-sm text-gray-600">
+                A balanced approach: 40% Owner Pay, 30% Reinvestment, 20% Savings, 10% Tax Reserve. 
+                Adjust based on your business goals and tax obligations.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
-    </MainLayout>
+    </div>
   );
 }
